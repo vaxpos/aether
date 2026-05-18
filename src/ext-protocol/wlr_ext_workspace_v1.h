@@ -9,7 +9,7 @@
 #ifndef WLR_TYPES_WLR_EXT_WORKSPACE_V1_H
 #define WLR_TYPES_WLR_EXT_WORKSPACE_V1_H
 
-#include <wayland-protocols/ext-workspace-v1-enum.h>
+#include "ext-workspace-v1-protocol.h"
 #include <wayland-server-core.h>
 
 struct wlr_output;

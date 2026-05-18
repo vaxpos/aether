@@ -4350,6 +4350,7 @@ void keypressmod(struct wl_listener *listener, void *data) {
 	/* This event is raised when a modifier key, such as shift or alt, is
 	 * pressed. We simply communicate this to the client. */
 	KeyboardGroup *group = wl_container_of(listener, group, modifiers);
+	static xkb_layout_index_t last_group = (xkb_layout_index_t)-1;
 
 	if (!aether_im_keyboard_grab_forward_modifiers(group)) {
 
@@ -4357,6 +4358,11 @@ void keypressmod(struct wl_listener *listener, void *data) {
 		/* Send modifiers to the client. */
 		wlr_seat_keyboard_notify_modifiers(
 			seat, &group->wlr_group->keyboard.modifiers);
+	}
+
+	if (last_group != group->wlr_group->keyboard.modifiers.group) {
+		last_group = group->wlr_group->keyboard.modifiers.group;
+		printstatus();
 	}
 }
 
