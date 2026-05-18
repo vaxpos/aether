@@ -62,8 +62,8 @@
     (synopsis "Wayland compositor based on wlroots and scenefx")
     (description
      "aetherWM is a modern, lightweight, high-performance Wayland compositor
-built on dwl — crafted for speed, flexibility, and a customizable desktop experience.")
-    (license (list license:gpl3 ;aetherwm itself, dwl
+built on aether — crafted for speed, flexibility, and a customizable desktop experience.")
+    (license (list license:gpl3 ;aetherwm itself, aether
                    license:expat ;dwm, sway, wlroots
                    license:cc0)))) ;tinywl
 

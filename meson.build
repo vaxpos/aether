@@ -129,7 +129,7 @@ executable('aether',
 )
 
 # build mmsg
-dwl_ipc_protocol = 'protocols/dwl-ipc-unstable-v2.xml'
+aether_ipc_protocol = 'protocols/aether-ipc-unstable-x.xml'
 
 wayland_scanner_client_header = generator(
   wayland_scanner,
@@ -146,8 +146,8 @@ wayland_scanner_private_code = generator(
 # 在 mmsg 目标中使用生成器
 executable('mmsg',
   'mmsg/mmsg.c',
-  wayland_scanner_private_code.process(dwl_ipc_protocol),
-  wayland_scanner_client_header.process(dwl_ipc_protocol),
+  wayland_scanner_private_code.process(aether_ipc_protocol),
+  wayland_scanner_client_header.process(aether_ipc_protocol),
   dependencies: [
     libwayland_client_dep
   ],

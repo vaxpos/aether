@@ -1,4 +1,4 @@
-#include "dwl-ipc.h"
+#include "aether-ipc.h"
 #include "ext-workspace.h"
 #include "foreign-toplevel.h"
 #include "tearing.h"

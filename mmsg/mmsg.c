@@ -1,5 +1,5 @@
 #include "arg.h"
-#include "dwl-ipc-unstable-v2-protocol.h"
+#include "aether-ipc-unstable-x-protocol.h"
 #include "dynarr.h"
 #include <ctype.h>
 #include <poll.h>
@@ -65,7 +65,7 @@ struct output {
 static DYNARR_DEF(struct output) outputs;
 
 static struct wl_display *display;
-static struct zdwl_ipc_manager_v2 *dwl_ipc_manager;
+static struct zaether_ipc_manager_v2 *aether_ipc_manager;
 
 // 为每个回调定义专用的空函数
 static void noop_geometry(void *data, struct wl_output *wl_output, int32_t x,
@@ -93,16 +93,16 @@ void bin_str_9bits(char *buf, uint32_t n) {
 	*buf = '\0'; // 字符串结尾
 }
 
-static void dwl_ipc_tags(void *data,
-						 struct zdwl_ipc_manager_v2 *dwl_ipc_manager,
+static void aether_ipc_tags(void *data,
+						 struct zaether_ipc_manager_v2 *aether_ipc_manager,
 						 uint32_t count) {
 	tagcount = count;
 	if (Tflag && mode & GET)
 		printf("%d\n", tagcount);
 }
 
-static void dwl_ipc_layout(void *data,
-						   struct zdwl_ipc_manager_v2 *dwl_ipc_manager,
+static void aether_ipc_layout(void *data,
+						   struct zaether_ipc_manager_v2 *aether_ipc_manager,
 						   const char *name) {
 	if (lflag && mode & SET && strcmp(layout_name, name) == 0)
 		layout_idx = layoutcount;
@@ -111,12 +111,12 @@ static void dwl_ipc_layout(void *data,
 	layoutcount++;
 }
 
-static const struct zdwl_ipc_manager_v2_listener dwl_ipc_listener = {
-	.tags = dwl_ipc_tags, .layout = dwl_ipc_layout};
+static const struct zaether_ipc_manager_v2_listener aether_ipc_listener = {
+	.tags = aether_ipc_tags, .layout = aether_ipc_layout};
 
 static void
-dwl_ipc_output_toggle_visibility(void *data,
-								 struct zdwl_ipc_output_v2 *dwl_ipc_output) {
+aether_ipc_output_toggle_visibility(void *data,
+								 struct zaether_ipc_output_v2 *aether_ipc_output) {
 	if (!vflag)
 		return;
 	char *output_name = data;
@@ -125,8 +125,8 @@ dwl_ipc_output_toggle_visibility(void *data,
 	printf("toggle\n");
 }
 
-static void dwl_ipc_output_active(void *data,
-								  struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_active(void *data,
+								  struct zaether_ipc_output_v2 *aether_ipc_output,
 								  uint32_t active) {
 	if (!oflag) {
 		if (mode & SET && !output_name && active)
@@ -139,15 +139,15 @@ static void dwl_ipc_output_active(void *data,
 	printf("selmon %u\n", active ? 1 : 0);
 }
 
-static void dwl_ipc_output_tag(void *data,
-							   struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_tag(void *data,
+							   struct zaether_ipc_output_v2 *aether_ipc_output,
 							   uint32_t tag, uint32_t state, uint32_t clients,
 							   uint32_t focused) {
 	if (!tflag)
 		return;
-	if (state == ZDWL_IPC_OUTPUT_V2_TAG_STATE_ACTIVE)
+	if (state == ZAETHER_IPC_OUTPUT_V2_TAG_STATE_ACTIVE)
 		seltags |= 1 << tag;
-	if (state == ZDWL_IPC_OUTPUT_V2_TAG_STATE_URGENT)
+	if (state == ZAETHER_IPC_OUTPUT_V2_TAG_STATE_URGENT)
 		urg |= 1 << tag;
 	if (clients > 0)
 		occ |= 1 << tag;
@@ -163,12 +163,12 @@ static void dwl_ipc_output_tag(void *data,
 	printf("tag %u %u %u %u\n", tag + 1, state, clients, focused);
 }
 
-static void dwl_ipc_output_layout(void *data,
-								  struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_layout(void *data,
+								  struct zaether_ipc_output_v2 *aether_ipc_output,
 								  uint32_t layout) {}
 
-static void dwl_ipc_output_layout_symbol(
-	void *data, struct zdwl_ipc_output_v2 *dwl_ipc_output, const char *layout) {
+static void aether_ipc_output_layout_symbol(
+	void *data, struct zaether_ipc_output_v2 *aether_ipc_output, const char *layout) {
 	if (!(lflag && mode & GET))
 		return;
 	char *output_name = data;
@@ -177,8 +177,8 @@ static void dwl_ipc_output_layout_symbol(
 	printf("layout %s\n", layout);
 }
 
-static void dwl_ipc_output_title(void *data,
-								 struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_title(void *data,
+								 struct zaether_ipc_output_v2 *aether_ipc_output,
 								 const char *title) {
 	if (!(cflag && mode & GET))
 		return;
@@ -188,8 +188,8 @@ static void dwl_ipc_output_title(void *data,
 	printf("title %s\n", title);
 }
 
-static void dwl_ipc_output_appid(void *data,
-								 struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_appid(void *data,
+								 struct zaether_ipc_output_v2 *aether_ipc_output,
 								 const char *appid) {
 	if (!(cflag && mode & GET))
 		return;
@@ -199,8 +199,8 @@ static void dwl_ipc_output_appid(void *data,
 	printf("appid %s\n", appid);
 }
 
-static void dwl_ipc_output_x(void *data,
-							 struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_x(void *data,
+							 struct zaether_ipc_output_v2 *aether_ipc_output,
 							 int32_t x) {
 	if (!xflag)
 		return;
@@ -210,8 +210,8 @@ static void dwl_ipc_output_x(void *data,
 	printf("x %d\n", x);
 }
 
-static void dwl_ipc_output_y(void *data,
-							 struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_y(void *data,
+							 struct zaether_ipc_output_v2 *aether_ipc_output,
 							 int32_t y) {
 	if (!xflag)
 		return;
@@ -221,8 +221,8 @@ static void dwl_ipc_output_y(void *data,
 	printf("y %d\n", y);
 }
 
-static void dwl_ipc_output_width(void *data,
-								 struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_width(void *data,
+								 struct zaether_ipc_output_v2 *aether_ipc_output,
 								 int32_t width) {
 	if (!xflag)
 		return;
@@ -232,8 +232,8 @@ static void dwl_ipc_output_width(void *data,
 	printf("width %d\n", width);
 }
 
-static void dwl_ipc_output_height(void *data,
-								  struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_height(void *data,
+								  struct zaether_ipc_output_v2 *aether_ipc_output,
 								  int32_t height) {
 	if (!xflag)
 		return;
@@ -243,8 +243,8 @@ static void dwl_ipc_output_height(void *data,
 	printf("height %d\n", height);
 }
 
-static void dwl_ipc_output_last_layer(void *data,
-									  struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_last_layer(void *data,
+									  struct zaether_ipc_output_v2 *aether_ipc_output,
 									  const char *last_layer) {
 	if (!eflag)
 		return;
@@ -254,8 +254,8 @@ static void dwl_ipc_output_last_layer(void *data,
 	printf("last_layer %s\n", last_layer);
 }
 
-static void dwl_ipc_output_kb_layout(void *data,
-									 struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_kb_layout(void *data,
+									 struct zaether_ipc_output_v2 *aether_ipc_output,
 									 const char *kb_layout) {
 	if (!kflag)
 		return;
@@ -266,8 +266,8 @@ static void dwl_ipc_output_kb_layout(void *data,
 }
 
 static void
-dwl_ipc_output_scalefactor(void *data,
-						   struct zdwl_ipc_output_v2 *dwl_ipc_output,
+aether_ipc_output_scalefactor(void *data,
+						   struct zaether_ipc_output_v2 *aether_ipc_output,
 						   const uint32_t scalefactor) {
 	if (!Aflag)
 		return;
@@ -277,8 +277,8 @@ dwl_ipc_output_scalefactor(void *data,
 	printf("scale_factor %f\n", scalefactor / 100.0f);
 }
 
-static void dwl_ipc_output_keymode(void *data,
-								   struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_keymode(void *data,
+								   struct zaether_ipc_output_v2 *aether_ipc_output,
 								   const char *keymode) {
 	if (!bflag)
 		return;
@@ -288,8 +288,8 @@ static void dwl_ipc_output_keymode(void *data,
 	printf("keymode %s\n", keymode);
 }
 
-static void dwl_ipc_output_fullscreen(void *data,
-									  struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_fullscreen(void *data,
+									  struct zaether_ipc_output_v2 *aether_ipc_output,
 									  uint32_t is_fullscreen) {
 	if (!mflag)
 		return;
@@ -299,8 +299,8 @@ static void dwl_ipc_output_fullscreen(void *data,
 	printf("fullscreen %u\n", is_fullscreen);
 }
 
-static void dwl_ipc_output_floating(void *data,
-									struct zdwl_ipc_output_v2 *dwl_ipc_output,
+static void aether_ipc_output_floating(void *data,
+									struct zaether_ipc_output_v2 *aether_ipc_output,
 									uint32_t is_floating) {
 	if (!fflag)
 		return;
@@ -310,16 +310,16 @@ static void dwl_ipc_output_floating(void *data,
 	printf("floating %u\n", is_floating);
 }
 
-static void dwl_ipc_output_frame(void *data,
-								 struct zdwl_ipc_output_v2 *dwl_ipc_output) {
+static void aether_ipc_output_frame(void *data,
+								 struct zaether_ipc_output_v2 *aether_ipc_output) {
 	if (mode & SET) {
 		if (data && (!output_name || strcmp(output_name, (char *)data)))
 			return;
 		if (qflag) {
-			zdwl_ipc_output_v2_quit(dwl_ipc_output);
+			zaether_ipc_output_v2_quit(aether_ipc_output);
 		}
 		if (lflag) {
-			zdwl_ipc_output_v2_set_layout(dwl_ipc_output, layout_idx);
+			zaether_ipc_output_v2_set_layout(aether_ipc_output, layout_idx);
 		}
 		if (tflag) {
 			uint32_t mask = seltags;
@@ -349,7 +349,7 @@ static void dwl_ipc_output_frame(void *data,
 			if ((i - 1) > tagcount)
 				die("bad tagset %s", tagset);
 
-			zdwl_ipc_output_v2_set_tags(dwl_ipc_output, mask, 0);
+			zaether_ipc_output_v2_set_tags(aether_ipc_output, mask, 0);
 		}
 		if (cflag) {
 			uint32_t and = ~0, xor = 0;
@@ -379,11 +379,11 @@ static void dwl_ipc_output_frame(void *data,
 			if ((i - 1) > tagcount)
 				die("bad client tagset %s", client_tags);
 
-			zdwl_ipc_output_v2_set_client_tags(dwl_ipc_output, and, xor);
+			zaether_ipc_output_v2_set_client_tags(aether_ipc_output, and, xor);
 		}
 		if (dflag) {
-			zdwl_ipc_output_v2_dispatch(
-				dwl_ipc_output, dispatch_cmd, dispatch_arg1, dispatch_arg2,
+			zaether_ipc_output_v2_dispatch(
+				aether_ipc_output, dispatch_cmd, dispatch_arg1, dispatch_arg2,
 				dispatch_arg3, dispatch_arg4, dispatch_arg5);
 		}
 		wl_display_flush(display);
@@ -409,25 +409,25 @@ static void dwl_ipc_output_frame(void *data,
 	fflush(stdout);
 }
 
-static const struct zdwl_ipc_output_v2_listener dwl_ipc_output_listener = {
-	.toggle_visibility = dwl_ipc_output_toggle_visibility,
-	.active = dwl_ipc_output_active,
-	.tag = dwl_ipc_output_tag,
-	.layout = dwl_ipc_output_layout,
-	.title = dwl_ipc_output_title,
-	.appid = dwl_ipc_output_appid,
-	.layout_symbol = dwl_ipc_output_layout_symbol,
-	.fullscreen = dwl_ipc_output_fullscreen,
-	.floating = dwl_ipc_output_floating,
-	.x = dwl_ipc_output_x,
-	.y = dwl_ipc_output_y,
-	.width = dwl_ipc_output_width,
-	.height = dwl_ipc_output_height,
-	.last_layer = dwl_ipc_output_last_layer,
-	.kb_layout = dwl_ipc_output_kb_layout,
-	.keymode = dwl_ipc_output_keymode,
-	.scalefactor = dwl_ipc_output_scalefactor,
-	.frame = dwl_ipc_output_frame,
+static const struct zaether_ipc_output_v2_listener aether_ipc_output_listener = {
+	.toggle_visibility = aether_ipc_output_toggle_visibility,
+	.active = aether_ipc_output_active,
+	.tag = aether_ipc_output_tag,
+	.layout = aether_ipc_output_layout,
+	.title = aether_ipc_output_title,
+	.appid = aether_ipc_output_appid,
+	.layout_symbol = aether_ipc_output_layout_symbol,
+	.fullscreen = aether_ipc_output_fullscreen,
+	.floating = aether_ipc_output_floating,
+	.x = aether_ipc_output_x,
+	.y = aether_ipc_output_y,
+	.width = aether_ipc_output_width,
+	.height = aether_ipc_output_height,
+	.last_layer = aether_ipc_output_last_layer,
+	.kb_layout = aether_ipc_output_kb_layout,
+	.keymode = aether_ipc_output_keymode,
+	.scalefactor = aether_ipc_output_scalefactor,
+	.frame = aether_ipc_output_frame,
 };
 
 static void wl_output_name(void *data, struct wl_output *output,
@@ -443,9 +443,9 @@ static void wl_output_name(void *data, struct wl_output *output,
 		wl_output_release(output);
 		return;
 	}
-	struct zdwl_ipc_output_v2 *dwl_ipc_output =
-		zdwl_ipc_manager_v2_get_output(dwl_ipc_manager, output);
-	zdwl_ipc_output_v2_add_listener(dwl_ipc_output, &dwl_ipc_output_listener,
+	struct zaether_ipc_output_v2 *aether_ipc_output =
+		zaether_ipc_manager_v2_get_output(aether_ipc_manager, output);
+	zaether_ipc_output_v2_add_listener(aether_ipc_output, &aether_ipc_output_listener,
 									output_name ? NULL : strdup(name));
 }
 
@@ -471,10 +471,10 @@ static void global_add(void *data, struct wl_registry *wl_registry,
 			wl_output_add_listener(o, &output_listener,
 								   &outputs.arr[outputs.len - 1]);
 		}
-	} else if (strcmp(interface, zdwl_ipc_manager_v2_interface.name) == 0) {
-		dwl_ipc_manager = wl_registry_bind(wl_registry, name,
-										   &zdwl_ipc_manager_v2_interface, 2);
-		zdwl_ipc_manager_v2_add_listener(dwl_ipc_manager, &dwl_ipc_listener,
+	} else if (strcmp(interface, zaether_ipc_manager_v2_interface.name) == 0) {
+		aether_ipc_manager = wl_registry_bind(wl_registry, name,
+										   &zaether_ipc_manager_v2_interface, 2);
+		zaether_ipc_manager_v2_add_listener(aether_ipc_manager, &aether_ipc_listener,
 										 NULL);
 	}
 }
@@ -741,8 +741,8 @@ int32_t main(int32_t argc, char *argv[]) {
 	wl_display_dispatch(display);
 	wl_display_roundtrip(display);
 
-	if (!dwl_ipc_manager)
-		die("bad dwl-ipc protocol");
+	if (!aether_ipc_manager)
+		die("bad aether-ipc protocol");
 
 	wl_display_roundtrip(display);
 

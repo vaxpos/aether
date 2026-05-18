@@ -283,7 +283,7 @@ typedef struct {
 	InputDevice *input_dev;
 } Switch;
 
-struct dwl_animation {
+struct aether_animation {
 	bool should_animate;
 	bool running;
 	bool tagining;
@@ -298,7 +298,7 @@ struct dwl_animation {
 	int32_t action;
 };
 
-struct dwl_opacity_animation {
+struct aether_opacity_animation {
 	bool running;
 	float current_opacity;
 	float target_opacity;
@@ -404,8 +404,8 @@ struct Client {
 	float stack_proportion;
 	float old_stack_proportion;
 	bool need_output_flush;
-	struct dwl_animation animation;
-	struct dwl_opacity_animation opacity_animation;
+	struct aether_animation animation;
+	struct aether_opacity_animation opacity_animation;
 	int32_t isterm, noswallow;
 	int32_t allow_csd;
 	int32_t force_fakemaximize;
@@ -446,7 +446,7 @@ typedef struct {
 	struct wl_list link;
 	struct wl_resource *resource;
 	Monitor *mon;
-} DwlIpcOutput;
+} aetherIpcOutput;
 
 typedef struct {
 	uint32_t mod;
@@ -494,7 +494,7 @@ typedef struct {
 	struct wl_listener unmap;
 	struct wl_listener surface_commit;
 
-	struct dwl_animation animation;
+	struct aether_animation animation;
 	bool dirty;
 	int32_t noblur;
 	int32_t noanim;
@@ -539,7 +539,7 @@ struct Monitor {
 	uint32_t resizing_count_pending;
 	uint32_t resizing_count_current;
 
-	struct wl_list dwl_ipc_outputs;
+	struct wl_list aether_ipc_outputs;
 	int32_t gappih; /* horizontal gap between windows */
 	int32_t gappiv; /* vertical gap between windows */
 	int32_t gappoh; /* horizontal outer gaps */
@@ -2002,7 +2002,7 @@ static void apply_edge_snap(Client *c) {
 
 void focuslayer(LayerSurface *l) {
 	focusclient(NULL, 0);
-	dwl_im_relay_set_focus(dwl_input_method_relay, l->layer_surface->surface);
+	aether_im_relay_set_focus(aether_input_method_relay, l->layer_surface->surface);
 	client_notify_enter(l->layer_surface->surface, wlr_seat_get_keyboard(seat));
 }
 
@@ -2618,7 +2618,7 @@ void cleanup(void) {
 
 	destroykeyboardgroup(&kb_group->destroy, NULL);
 
-	dwl_im_relay_finish(dwl_input_method_relay);
+	aether_im_relay_finish(aether_input_method_relay);
 
 	/* If it's not destroyed manually it will cause a use-after-free of
 	 * wlr_seat. Destroy it until it's fixed in the wlroots side */
@@ -3360,7 +3360,7 @@ void createmon(struct wl_listener *listener, void *data) {
 	m->wlr_output = wlr_output;
 	m->wlr_output->data = m;
 
-	wl_list_init(&m->dwl_ipc_outputs);
+	wl_list_init(&m->aether_ipc_outputs);
 
 	for (i = 0; i < LENGTH(m->layers); i++)
 		wl_list_init(&m->layers[i]);
@@ -3993,7 +3993,7 @@ void focusclient(Client *c, int32_t lift) {
 			selmon->sel = NULL;
 
 		// clear text input focus state
-		dwl_im_relay_set_focus(dwl_input_method_relay, NULL);
+		aether_im_relay_set_focus(aether_input_method_relay, NULL);
 		wlr_seat_keyboard_notify_clear_focus(seat);
 		if (active_constraint) {
 			cursorconstrain(NULL);
@@ -4007,7 +4007,7 @@ void focusclient(Client *c, int32_t lift) {
 	// set text input focus
 	// must before client_notify_enter,
 	// otherwise the position of text_input will be wrong.
-	dwl_im_relay_set_focus(dwl_input_method_relay, client_surface(c));
+	aether_im_relay_set_focus(aether_input_method_relay, client_surface(c));
 
 	/* Have a client, so focus its top-level wlr_surface */
 	client_notify_enter(client_surface(c), wlr_seat_get_keyboard(seat));
@@ -4091,7 +4091,7 @@ void inputdevice(struct wl_listener *listener, void *data) {
 	}
 
 	/* We need to let the wlr_seat know what our capabilities are, which is
-	 * communiciated to the client. In dwl we always have a cursor, even if
+	 * communiciated to the client. In aether we always have a cursor, even if
 	 * there are no pointer devices, so we always include that capability.
 	 */
 	/* TODO do we actually require a cursor? */
@@ -4338,7 +4338,7 @@ void keypress(struct wl_listener *listener, void *data) {
 	if (hit_global) {
 		return;
 	}
-	if (!dwl_im_keyboard_grab_forward_key(group, event)) {
+	if (!aether_im_keyboard_grab_forward_key(group, event)) {
 		wlr_seat_set_keyboard(seat, &group->wlr_group->keyboard);
 		/* Pass unhandled keycodes along to the client. */
 		wlr_seat_keyboard_notify_key(seat, event->time_msec, event->keycode,
@@ -4351,7 +4351,7 @@ void keypressmod(struct wl_listener *listener, void *data) {
 	 * pressed. We simply communicate this to the client. */
 	KeyboardGroup *group = wl_container_of(listener, group, modifiers);
 
-	if (!dwl_im_keyboard_grab_forward_modifiers(group)) {
+	if (!aether_im_keyboard_grab_forward_modifiers(group)) {
 
 		wlr_seat_set_keyboard(seat, &group->wlr_group->keyboard);
 		/* Send modifiers to the client. */
@@ -5072,7 +5072,7 @@ outputmgrapplyortest(struct wlr_output_configuration_v1 *config, int32_t test) {
 		wlr_output_configuration_v1_send_failed(config);
 	wlr_output_configuration_v1_destroy(config);
 
-	/* https://codeberg.org/dwl/dwl/issues/577 */
+	/* https://codeberg.org/aether/aether/issues/577 */
 	updatemons(NULL, NULL);
 }
 
@@ -5558,7 +5558,7 @@ run(char *startup_cmd) {
 	}
 
 	/* Mark stdout as non-blocking to avoid people who does not close stdin
-	 * nor consumes it in their startup script getting dwl frozen */
+	 * nor consumes it in their startup script getting aether frozen */
 	if (fd_set_nonblock(STDOUT_FILENO) < 0)
 		close(STDOUT_FILENO);
 
@@ -6020,7 +6020,7 @@ void setmon(Client *c, Monitor *m, uint32_t newtags, bool focus) {
 void setpsel(struct wl_listener *listener, void *data) {
 	/* This event is raised by the seat when a client wants to set the
 	 * selection, usually when the user copies something. wlroots allows
-	 * compositors to ignore such requests if they so choose, but in dwl we
+	 * compositors to ignore such requests if they so choose, but in aether we
 	 * always honor
 	 */
 	struct wlr_seat_request_set_primary_selection_event *event = data;
@@ -6030,7 +6030,7 @@ void setpsel(struct wl_listener *listener, void *data) {
 void setsel(struct wl_listener *listener, void *data) {
 	/* This event is raised by the seat when a client wants to set the
 	 * selection, usually when the user copies something. wlroots allows
-	 * compositors to ignore such requests if they so choose, but in dwl we
+	 * compositors to ignore such requests if they so choose, but in aether we
 	 * always honor
 	 */
 	struct wlr_seat_request_set_selection_event *event = data;
@@ -6085,9 +6085,9 @@ void handle_print_status(struct wl_listener *listener, void *data) {
 		if (!m->wlr_output->enabled) {
 			continue;
 		}
-		dwl_ext_workspace_printstatus(m);
+		aether_ext_workspace_printstatus(m);
 
-		dwl_ipc_output_printstatus(m);
+		aether_ipc_output_printstatus(m);
 	}
 }
 
@@ -6365,7 +6365,7 @@ void setup(void) {
 	input_method_manager = wlr_input_method_manager_v2_create(dpy);
 	text_input_manager = wlr_text_input_manager_v3_create(dpy);
 
-	dwl_input_method_relay = dwl_im_relay_create();
+	aether_input_method_relay = aether_im_relay_create();
 
 	drm_lease_manager = wlr_drm_lease_v1_manager_create(dpy, backend);
 	if (drm_lease_manager) {
@@ -6375,8 +6375,8 @@ void setup(void) {
 		wlr_log(WLR_INFO, "VR will not be available.");
 	}
 
-	wl_global_create(dpy, &zdwl_ipc_manager_v2_interface, 2, NULL,
-					 dwl_ipc_manager_bind);
+	wl_global_create(dpy, &zaether_ipc_manager_v2_interface, 2, NULL,
+					 aether_ipc_manager_bind);
 
 	// 创建顶层管理句柄
 	foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(dpy);
@@ -6761,7 +6761,7 @@ void updatemons(struct wl_listener *listener, void *data) {
 	wlr_scene_node_set_position(&root_bg->node, sgeom.x, sgeom.y);
 	wlr_scene_rect_set_size(root_bg, sgeom.width, sgeom.height);
 
-	/* Make sure the clients are hidden when dwl is locked */
+	/* Make sure the clients are hidden when aether is locked */
 	wlr_scene_node_set_position(&locked_bg->node, sgeom.x, sgeom.y);
 	wlr_scene_rect_set_size(locked_bg, sgeom.width, sgeom.height);
 
@@ -7219,7 +7219,7 @@ void xwaylandready(struct wl_listener *listener, void *data) {
 	/* assign the one and only seat */
 	wlr_xwayland_set_seat(xwayland, seat);
 
-	/* Set the default XWayland cursor to match the rest of dwl. */
+	/* Set the default XWayland cursor to match the rest of aether. */
 	if ((xcursor = wlr_xcursor_manager_get_xcursor(cursor_mgr, "default", 1)))
 		wlr_xwayland_set_cursor(
 			xwayland, xcursor->images[0]->buffer, xcursor->images[0]->width * 4,
