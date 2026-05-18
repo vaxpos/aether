@@ -32,18 +32,7 @@ void restore_size_per(Monitor *m, Client *c) {
 	const Layout *current_layout = m->pertag->ltidxs[m->pertag->curtag];
 
 	if (current_layout->id == SCROLLER ||
-		current_layout->id == VERTICAL_SCROLLER || current_layout->id == GRID ||
-		current_layout->id == VERTICAL_GRID || current_layout->id == DECK ||
-		current_layout->id == VERTICAL_DECK || current_layout->id == MONOCLE) {
-		return;
-	}
-
-	if (current_layout->id == CENTER_TILE) {
-		wl_list_for_each(fc, &clients, link) {
-			if (VISIBLEON(fc, m) && ISTILED(fc) && !c->ismaster) {
-				set_size_per(m, fc);
-			}
-		}
+		current_layout->id == VERTICAL_SCROLLER) {
 		return;
 	}
 
@@ -87,13 +76,9 @@ void set_size_per(Monitor *m, Client *c) {
 	if (!m || !c)
 		return;
 
-	const Layout *current_layout = m->pertag->ltidxs[m->pertag->curtag];
 
 	wl_list_for_each(fc, &clients, link) {
 		if (VISIBLEON(fc, m) && ISTILED(fc) && fc != c) {
-			if (current_layout->id == CENTER_TILE &&
-				(fc->isleftstack ^ c->isleftstack))
-				continue;
 			c->master_mfact_per = fc->master_mfact_per;
 			c->master_inner_per = fc->master_inner_per;
 			c->stack_inner_per = fc->stack_inner_per;
@@ -106,417 +91,6 @@ void set_size_per(Monitor *m, Client *c) {
 		c->master_mfact_per = m->pertag->mfacts[m->pertag->curtag];
 		c->master_inner_per = 1.0f;
 		c->stack_inner_per = 1.0f;
-	}
-}
-
-void resize_tile_master_horizontal(Client *grabc, bool isdrag, int32_t offsetx,
-								   int32_t offsety, uint32_t time,
-								   int32_t type) {
-	Client *tc = NULL;
-	float delta_x, delta_y;
-	Client *next = NULL;
-	Client *prev = NULL;
-	Client *nextnext = NULL;
-	Client *prevprev = NULL;
-	struct wl_list *node;
-	bool begin_find_nextnext = false;
-	bool begin_find_prevprev = false;
-
-	/* 寻找 next / nextnext */
-	for (node = grabc->link.next; node != &clients; node = node->next) {
-		tc = wl_container_of(node, tc, link);
-		if (begin_find_nextnext && VISIBLEON(tc, grabc->mon) && ISTILED(tc)) {
-			nextnext = tc;
-			break;
-		}
-		if (!begin_find_nextnext && VISIBLEON(tc, grabc->mon) && ISTILED(tc)) {
-			next = tc;
-			begin_find_nextnext = true;
-			continue;
-		}
-	}
-
-	/* 寻找 prev / prevprev */
-	for (node = grabc->link.prev; node != &clients; node = node->prev) {
-		tc = wl_container_of(node, tc, link);
-		if (begin_find_prevprev && VISIBLEON(tc, grabc->mon) && ISTILED(tc)) {
-			prevprev = tc;
-			break;
-		}
-		if (!begin_find_prevprev && VISIBLEON(tc, grabc->mon) && ISTILED(tc)) {
-			prev = tc;
-			begin_find_prevprev = true;
-			continue;
-		}
-	}
-
-	if (!start_drag_window && isdrag) {
-		drag_begin_cursorx = cursor->x;
-		drag_begin_cursory = cursor->y;
-		start_drag_window = true;
-		grabc->old_master_mfact_per = grabc->master_mfact_per;
-		grabc->old_master_inner_per = grabc->master_inner_per;
-		grabc->old_stack_inner_per = grabc->stack_inner_per;
-		grabc->cursor_in_upper_half =
-			cursor->y < grabc->geom.y + grabc->geom.height / 2;
-		grabc->cursor_in_left_half =
-			cursor->x < grabc->geom.x + grabc->geom.width / 2;
-		grabc->drag_begin_geom = grabc->geom;
-	} else {
-		if (isdrag) {
-			offsetx = cursor->x - drag_begin_cursorx;
-			offsety = cursor->y - drag_begin_cursory;
-		} else {
-			grabc->old_master_mfact_per = grabc->master_mfact_per;
-			grabc->old_master_inner_per = grabc->master_inner_per;
-			grabc->old_stack_inner_per = grabc->stack_inner_per;
-			grabc->drag_begin_geom = grabc->geom;
-			grabc->cursor_in_upper_half = true;
-			grabc->cursor_in_left_half = false;
-		}
-
-		if (grabc->ismaster) {
-			delta_x = (float)(offsetx) * (grabc->old_master_mfact_per) /
-					  grabc->drag_begin_geom.width;
-			delta_y = (float)(offsety) * (grabc->old_master_inner_per) /
-					  grabc->drag_begin_geom.height;
-		} else {
-			delta_x = (float)(offsetx) * (1 - grabc->old_master_mfact_per) /
-					  grabc->drag_begin_geom.width;
-			delta_y = (float)(offsety) * (grabc->old_stack_inner_per) /
-					  grabc->drag_begin_geom.height;
-		}
-
-		bool moving_up, moving_down;
-		if (!isdrag) {
-			moving_up = offsety < 0;
-			moving_down = offsety > 0;
-		} else {
-			moving_up = cursor->y < drag_begin_cursory;
-			moving_down = cursor->y > drag_begin_cursory;
-		}
-
-		if (grabc->ismaster && !prev) {
-			if (moving_up)
-				delta_y = -fabsf(delta_y);
-			else
-				delta_y = fabsf(delta_y);
-		} else if (grabc->ismaster && next && !next->ismaster) {
-			if (moving_up)
-				delta_y = fabsf(delta_y);
-			else
-				delta_y = -fabsf(delta_y);
-		} else if (!grabc->ismaster && prev && prev->ismaster) {
-			if (moving_up)
-				delta_y = -fabsf(delta_y);
-			else
-				delta_y = fabsf(delta_y);
-		} else if (!grabc->ismaster && !next) {
-			if (moving_up)
-				delta_y = fabsf(delta_y);
-			else
-				delta_y = -fabsf(delta_y);
-		} else if (type == CENTER_TILE && !grabc->ismaster && !nextnext) {
-			if (moving_up)
-				delta_y = fabsf(delta_y);
-			else
-				delta_y = -fabsf(delta_y);
-		} else if (type == CENTER_TILE && !grabc->ismaster && prevprev &&
-				   prevprev->ismaster) {
-			if (moving_up)
-				delta_y = -fabsf(delta_y);
-			else
-				delta_y = fabsf(delta_y);
-		} else if ((grabc->cursor_in_upper_half && moving_up) ||
-				   (!grabc->cursor_in_upper_half && moving_down)) {
-			delta_y = fabsf(delta_y) * 2;
-		} else {
-			delta_y = -fabsf(delta_y) * 2;
-		}
-
-		if (!grabc->ismaster && grabc->isleftstack && type == CENTER_TILE)
-			delta_x = delta_x * -1.0f;
-		if (grabc->ismaster && type == CENTER_TILE &&
-			grabc->cursor_in_left_half)
-			delta_x = delta_x * -1.0f;
-		if (grabc->ismaster && type == CENTER_TILE)
-			delta_x = delta_x * 2;
-		if (type == RIGHT_TILE)
-			delta_x = delta_x * -1.0f;
-
-		float new_master_mfact_per = grabc->old_master_mfact_per + delta_x;
-		float new_master_inner_per = grabc->old_master_inner_per + delta_y;
-		float new_stack_inner_per = grabc->old_stack_inner_per + delta_y;
-
-		new_master_mfact_per = fmaxf(0.1f, fminf(0.9f, new_master_mfact_per));
-		new_master_inner_per = fmaxf(0.1f, fminf(0.9f, new_master_inner_per));
-		new_stack_inner_per = fmaxf(0.1f, fminf(0.9f, new_stack_inner_per));
-
-		// 实时缩放同组其他窗口的比例，保持组内总和为 1,
-		// 不然增加的比例并不是排布后的比例
-		if (isdrag) {
-			if (grabc->ismaster) {
-				/* 主窗口组：调整所有主窗口的 master_inner_per */
-				float cur_other_sum = 1.0f - grabc->master_inner_per;
-				float new_other_sum = 1.0f - new_master_inner_per;
-				if (cur_other_sum > 0.001f) {
-					float scale = new_other_sum / cur_other_sum;
-					wl_list_for_each(tc, &clients, link) {
-						if (VISIBLEON(tc, grabc->mon) && ISTILED(tc) &&
-							tc->ismaster && tc != grabc)
-							tc->master_inner_per *= scale;
-					}
-				}
-			} else {
-				/* 栈窗口组：根据布局类型分开处理 */
-				if (type == CENTER_TILE) {
-					/* 仅缩放同侧栈窗口的 stack_inner_per */
-					float cur_other_sum = 1.0f - grabc->stack_inner_per;
-					float new_other_sum = 1.0f - new_stack_inner_per;
-					if (cur_other_sum > 0.001f) {
-						float scale = new_other_sum / cur_other_sum;
-						wl_list_for_each(tc, &clients, link) {
-							if (VISIBLEON(tc, grabc->mon) && ISTILED(tc) &&
-								!tc->ismaster && tc != grabc &&
-								tc->isleftstack == grabc->isleftstack)
-								tc->stack_inner_per *= scale;
-						}
-					}
-				} else {
-					/* TILE / RIGHT_TILE / DECK：所有栈窗口共用一个比例组 */
-					float cur_other_sum = 1.0f - grabc->stack_inner_per;
-					float new_other_sum = 1.0f - new_stack_inner_per;
-					if (cur_other_sum > 0.001f) {
-						float scale = new_other_sum / cur_other_sum;
-						wl_list_for_each(tc, &clients, link) {
-							if (VISIBLEON(tc, grabc->mon) && ISTILED(tc) &&
-								!tc->ismaster && tc != grabc)
-								tc->stack_inner_per *= scale;
-						}
-					}
-				}
-			}
-		} else {
-			/* 键盘步进 */
-			wl_list_for_each(tc, &clients, link) {
-				if (!VISIBLEON(tc, grabc->mon) || !ISTILED(tc))
-					continue;
-				if (tc != grabc) {
-					if (!tc->ismaster && new_stack_inner_per != 1.0f &&
-						grabc->old_stack_inner_per != 1.0f &&
-						(type != CENTER_TILE ||
-						 !(grabc->isleftstack ^ tc->isleftstack)))
-						tc->stack_inner_per = (1 - new_stack_inner_per) /
-											  (1 - grabc->old_stack_inner_per) *
-											  tc->stack_inner_per;
-					if (tc->ismaster && new_master_inner_per != 1.0f &&
-						grabc->old_master_inner_per != 1.0f)
-						tc->master_inner_per =
-							(1.0f - new_master_inner_per) /
-							(1.0f - grabc->old_master_inner_per) *
-							tc->master_inner_per;
-				}
-			}
-		}
-
-		/* 将新比例应用到抓取窗口本身 */
-		grabc->master_inner_per = new_master_inner_per;
-		grabc->stack_inner_per = new_stack_inner_per;
-
-		/* 广播 master_mfact_per 到所有平铺窗口 */
-		wl_list_for_each(tc, &clients, link) {
-			if (VISIBLEON(tc, grabc->mon) && ISTILED(tc))
-				tc->master_mfact_per = new_master_mfact_per;
-		}
-
-		if (!isdrag) {
-			arrange(grabc->mon, false, false);
-			return;
-		}
-
-		if (last_apply_drap_time == 0 ||
-			time - last_apply_drap_time > config.drag_tile_refresh_interval) {
-			arrange(grabc->mon, false, false);
-			last_apply_drap_time = time;
-		}
-	}
-}
-
-void resize_tile_master_vertical(Client *grabc, bool isdrag, int32_t offsetx,
-								 int32_t offsety, uint32_t time, int32_t type) {
-	Client *tc = NULL;
-	float delta_x, delta_y;
-	Client *next = NULL;
-	Client *prev = NULL;
-	struct wl_list *node;
-
-	/* 寻找 next */
-	for (node = grabc->link.next; node != &clients; node = node->next) {
-		tc = wl_container_of(node, tc, link);
-		if (VISIBLEON(tc, grabc->mon) && ISTILED(tc)) {
-			next = tc;
-			break;
-		}
-	}
-
-	/* 寻找 prev */
-	for (node = grabc->link.prev; node != &clients; node = node->prev) {
-		tc = wl_container_of(node, tc, link);
-		if (VISIBLEON(tc, grabc->mon) && ISTILED(tc)) {
-			prev = tc;
-			break;
-		}
-	}
-
-	if (!start_drag_window && isdrag) {
-		drag_begin_cursorx = cursor->x;
-		drag_begin_cursory = cursor->y;
-		start_drag_window = true;
-		grabc->old_master_mfact_per = grabc->master_mfact_per;
-		grabc->old_master_inner_per = grabc->master_inner_per;
-		grabc->old_stack_inner_per = grabc->stack_inner_per;
-		grabc->cursor_in_upper_half =
-			cursor->y < grabc->geom.y + grabc->geom.height / 2;
-		grabc->cursor_in_left_half =
-			cursor->x < grabc->geom.x + grabc->geom.width / 2;
-		grabc->drag_begin_geom = grabc->geom;
-	} else {
-		if (isdrag) {
-			offsetx = cursor->x - drag_begin_cursorx;
-			offsety = cursor->y - drag_begin_cursory;
-		} else {
-			grabc->old_master_mfact_per = grabc->master_mfact_per;
-			grabc->old_master_inner_per = grabc->master_inner_per;
-			grabc->old_stack_inner_per = grabc->stack_inner_per;
-			grabc->drag_begin_geom = grabc->geom;
-			grabc->cursor_in_upper_half = true;
-			grabc->cursor_in_left_half = false;
-		}
-
-		if (grabc->ismaster) {
-			delta_x = (float)(offsetx) * (grabc->old_master_inner_per) /
-					  grabc->drag_begin_geom.width;
-			delta_y = (float)(offsety) * (grabc->old_master_mfact_per) /
-					  grabc->drag_begin_geom.height;
-		} else {
-			delta_x = (float)(offsetx) * (grabc->old_stack_inner_per) /
-					  grabc->drag_begin_geom.width;
-			delta_y = (float)(offsety) * (1 - grabc->old_master_mfact_per) /
-					  grabc->drag_begin_geom.height;
-		}
-
-		bool moving_left, moving_right;
-		if (!isdrag) {
-			moving_left = offsetx < 0;
-			moving_right = offsetx > 0;
-		} else {
-			moving_left = cursor->x < drag_begin_cursorx;
-			moving_right = cursor->x > drag_begin_cursorx;
-		}
-
-		if (grabc->ismaster && !prev) {
-			if (moving_left)
-				delta_x = -fabsf(delta_x);
-			else
-				delta_x = fabsf(delta_x);
-		} else if (grabc->ismaster && next && !next->ismaster) {
-			if (moving_left)
-				delta_x = fabsf(delta_x);
-			else
-				delta_x = -fabsf(delta_x);
-		} else if (!grabc->ismaster && prev && prev->ismaster) {
-			if (moving_left)
-				delta_x = -fabsf(delta_x);
-			else
-				delta_x = fabsf(delta_x);
-		} else if (!grabc->ismaster && !next) {
-			if (moving_left)
-				delta_x = fabsf(delta_x);
-			else
-				delta_x = -fabsf(delta_x);
-		} else if ((grabc->cursor_in_left_half && moving_left) ||
-				   (!grabc->cursor_in_left_half && moving_right)) {
-			delta_x = fabsf(delta_x) * 2;
-		} else {
-			delta_x = -fabsf(delta_x) * 2;
-		}
-
-		float new_master_mfact_per = grabc->old_master_mfact_per + delta_y;
-		float new_master_inner_per = grabc->old_master_inner_per + delta_x;
-		float new_stack_inner_per = grabc->old_stack_inner_per + delta_x;
-
-		new_master_mfact_per = fmaxf(0.1f, fminf(0.9f, new_master_mfact_per));
-		new_master_inner_per = fmaxf(0.1f, fminf(0.9f, new_master_inner_per));
-		new_stack_inner_per = fmaxf(0.1f, fminf(0.9f, new_stack_inner_per));
-
-		// 实时缩放同组其他窗口的比例，保持组内总和为 1,
-		// 不然增加的比例并不是排布后的比例
-
-		if (isdrag) {
-			if (grabc->ismaster) {
-				float cur_other_sum = 1.0f - grabc->master_inner_per;
-				float new_other_sum = 1.0f - new_master_inner_per;
-				if (cur_other_sum > 0.001f) {
-					float scale = new_other_sum / cur_other_sum;
-					wl_list_for_each(tc, &clients, link) {
-						if (VISIBLEON(tc, grabc->mon) && ISTILED(tc) &&
-							tc->ismaster && tc != grabc)
-							tc->master_inner_per *= scale;
-					}
-				}
-			} else {
-				/* 所有栈窗口（垂直布局没有左侧/右侧区分） */
-				float cur_other_sum = 1.0f - grabc->stack_inner_per;
-				float new_other_sum = 1.0f - new_stack_inner_per;
-				if (cur_other_sum > 0.001f) {
-					float scale = new_other_sum / cur_other_sum;
-					wl_list_for_each(tc, &clients, link) {
-						if (VISIBLEON(tc, grabc->mon) && ISTILED(tc) &&
-							!tc->ismaster && tc != grabc)
-							tc->stack_inner_per *= scale;
-					}
-				}
-			}
-		} else {
-			/* 键盘步进 */
-			wl_list_for_each(tc, &clients, link) {
-				if (!VISIBLEON(tc, grabc->mon) || !ISTILED(tc))
-					continue;
-				if (tc != grabc) {
-					if (!tc->ismaster && new_stack_inner_per != 1.0f &&
-						grabc->old_stack_inner_per != 1.0f)
-						tc->stack_inner_per = (1 - new_stack_inner_per) /
-											  (1 - grabc->old_stack_inner_per) *
-											  tc->stack_inner_per;
-					if (tc->ismaster && new_master_inner_per != 1.0f &&
-						grabc->old_master_inner_per != 1.0f)
-						tc->master_inner_per =
-							(1.0f - new_master_inner_per) /
-							(1.0f - grabc->old_master_inner_per) *
-							tc->master_inner_per;
-				}
-			}
-		}
-
-		grabc->master_inner_per = new_master_inner_per;
-		grabc->stack_inner_per = new_stack_inner_per;
-
-		/* 广播 master_mfact_per */
-		wl_list_for_each(tc, &clients, link) {
-			if (VISIBLEON(tc, grabc->mon) && ISTILED(tc))
-				tc->master_mfact_per = new_master_mfact_per;
-		}
-
-		if (!isdrag) {
-			arrange(grabc->mon, false, false);
-			return;
-		}
-
-		if (last_apply_drap_time == 0 ||
-			time - last_apply_drap_time > config.drag_tile_refresh_interval) {
-			arrange(grabc->mon, false, false);
-			last_apply_drap_time = time;
-		}
 	}
 }
 
@@ -755,17 +329,7 @@ void resize_tile_client(Client *grabc, bool isdrag, int32_t offsetx,
 
 	const Layout *current_layout =
 		grabc->mon->pertag->ltidxs[grabc->mon->pertag->curtag];
-	if (current_layout->id == TILE || current_layout->id == DECK ||
-		current_layout->id == CENTER_TILE || current_layout->id == RIGHT_TILE
-
-	) {
-		resize_tile_master_horizontal(grabc, isdrag, offsetx, offsety, time,
-									  current_layout->id);
-	} else if (current_layout->id == VERTICAL_TILE ||
-			   current_layout->id == VERTICAL_DECK) {
-		resize_tile_master_vertical(grabc, isdrag, offsetx, offsety, time,
-									current_layout->id);
-	} else if (current_layout->id == SCROLLER) {
+	if (current_layout->id == SCROLLER) {
 		resize_tile_scroller(grabc, isdrag, offsetx, offsety, time, false);
 	} else if (current_layout->id == VERTICAL_SCROLLER) {
 		resize_tile_scroller(grabc, isdrag, offsetx, offsety, time, true);
@@ -794,74 +358,29 @@ void reset_size_per_mon(Monitor *m, int32_t tile_cilent_num,
 						int32_t stack_num) {
 	Client *c = NULL;
 	int32_t i = 0;
-	uint32_t stack_index = 0;
+
 	uint32_t nmasters = m->pertag->nmasters[m->pertag->curtag];
 
-	if (m->pertag->ltidxs[m->pertag->curtag]->id != CENTER_TILE) {
+	wl_list_for_each(c, &clients, link) {
+		if (VISIBLEON(c, m) && ISTILED(c)) {
 
-		wl_list_for_each(c, &clients, link) {
-			if (VISIBLEON(c, m) && ISTILED(c)) {
-
-				if (total_master_inner_percent > 0.0 && i < nmasters) {
-					c->ismaster = true;
-					c->stack_inner_per = stack_num ? 1.0f / stack_num : 1.0f;
-					c->master_inner_per =
-						c->master_inner_per / total_master_inner_percent;
-				} else {
-					c->ismaster = false;
-					c->master_inner_per =
-						master_num > 0 ? 1.0f / master_num : 1.0f;
-					c->stack_inner_per =
-						total_stack_hight_percent
-							? c->stack_inner_per / total_stack_hight_percent
-							: 1.0f;
-				}
-				i++;
-
-				check_size_per_valid(c);
+			if (total_master_inner_percent > 0.0 && i < nmasters) {
+				c->ismaster = true;
+				c->stack_inner_per = stack_num ? 1.0f / stack_num : 1.0f;
+				c->master_inner_per =
+					c->master_inner_per / total_master_inner_percent;
+			} else {
+				c->ismaster = false;
+				c->master_inner_per =
+					master_num > 0 ? 1.0f / master_num : 1.0f;
+				c->stack_inner_per =
+					total_stack_hight_percent
+						? c->stack_inner_per / total_stack_hight_percent
+						: 1.0f;
 			}
-		}
-	} else {
-		wl_list_for_each(c, &clients, link) {
-			if (VISIBLEON(c, m) && ISTILED(c)) {
+			i++;
 
-				if (total_master_inner_percent > 0.0 && i < nmasters) {
-					c->ismaster = true;
-					if ((stack_index % 2) ^ (tile_cilent_num % 2 == 0)) {
-						c->stack_inner_per =
-							stack_num > 1 ? 1.0f / ((stack_num - 1) / 2.0f)
-										  : 1.0f;
-					} else {
-						c->stack_inner_per =
-							stack_num > 1 ? 2.0f / stack_num : 1.0f;
-					}
-
-					c->master_inner_per =
-						c->master_inner_per / total_master_inner_percent;
-				} else {
-					stack_index = i - nmasters;
-
-					c->ismaster = false;
-					c->master_inner_per =
-						master_num > 0 ? 1.0f / master_num : 1.0f;
-					if ((stack_index % 2) ^ (tile_cilent_num % 2 == 0)) {
-						c->stack_inner_per =
-							total_right_stack_hight_percent
-								? c->stack_inner_per /
-									  total_right_stack_hight_percent
-								: 1.0f;
-					} else {
-						c->stack_inner_per =
-							total_left_stack_hight_percent
-								? c->stack_inner_per /
-									  total_left_stack_hight_percent
-								: 1.0f;
-					}
-				}
-				i++;
-
-				check_size_per_valid(c);
-			}
+			check_size_per_valid(c);
 		}
 	}
 }

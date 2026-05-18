@@ -6440,7 +6440,6 @@ void tag_client(const Arg *arg, Client *target_client) {
 	printstatus();
 }
 
-void overview(Monitor *m) { grid(m); }
 
 // 目标窗口有其他窗口和它同个tag就返回0
 uint32_t want_restore_fullscreen(Client *target_client) {

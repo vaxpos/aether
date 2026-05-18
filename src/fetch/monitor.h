@@ -27,10 +27,6 @@ bool is_scroller_layout(Monitor *m) {
 }
 
 bool is_centertile_layout(Monitor *m) {
-
-	if (m->pertag->ltidxs[m->pertag->curtag]->id == CENTER_TILE)
-		return true;
-
 	return false;
 }
 

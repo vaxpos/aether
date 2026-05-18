@@ -30,21 +30,10 @@ enum corner_location set_client_corner_location(Client *c) {
 }
 
 bool is_horizontal_stack_layout(Monitor *m) {
-
-	if (m->pertag->curtag &&
-		(m->pertag->ltidxs[m->pertag->curtag]->id == TILE ||
-		 m->pertag->ltidxs[m->pertag->curtag]->id == DECK))
-		return true;
-
 	return false;
 }
 
 bool is_horizontal_right_stack_layout(Monitor *m) {
-
-	if (m->pertag->curtag &&
-		(m->pertag->ltidxs[m->pertag->curtag]->id == RIGHT_TILE))
-		return true;
-
 	return false;
 }
 
@@ -545,15 +534,9 @@ void client_set_drop_area(Client *c) {
 	bool dwindle_familiar =
 		cur_layout->id == DWINDLE && config.dwindle_drop_simple_split;
 
-	uint32_t nmaster = c->mon->pertag->nmasters[c->mon->pertag->curtag];
 
-	bool should_swap =
-		(cur_layout->id == DECK || cur_layout->id == VERTICAL_DECK ||
-		 cur_layout->id == MONOCLE || cur_layout->id == GRID ||
-		 cur_layout->id == VERTICAL_GRID) ||
-		((cur_layout->id == TILE || cur_layout->id == VERTICAL_TILE ||
-		  cur_layout->id == CENTER_TILE || cur_layout->id == RIGHT_TILE) &&
-		 nmaster == 1 && c->ismaster);
+
+	bool should_swap = false;
 
 	if (dwindle_familiar) {
 		bool split_h = c->geom.width >= c->geom.height;
@@ -594,36 +577,7 @@ void client_set_drop_area(Client *c) {
 		drop_box.width = client_width;
 		drop_box.height = client_height;
 		drop_direction = UNDIR;
-	} else if (cur_layout->id == TILE || cur_layout->id == DECK ||
-			   cur_layout->id == CENTER_TILE || cur_layout->id == RIGHT_TILE) {
-		if (rel_y < client_height * 0.5) {
-			drop_direction = UP;
-			drop_box.x = bw;
-			drop_box.y = bw;
-			drop_box.width = client_width;
-			drop_box.height = client_height / 2;
-		} else {
-			drop_direction = DOWN;
-			drop_box.x = bw;
-			drop_box.y = bw + client_height / 2;
-			drop_box.width = client_width;
-			drop_box.height = client_height / 2;
-		}
-	} else if (cur_layout->id == VERTICAL_TILE ||
-			   cur_layout->id == VERTICAL_DECK) {
-		if (rel_x < client_width * 0.5) {
-			drop_direction = LEFT;
-			drop_box.x = bw;
-			drop_box.y = bw;
-			drop_box.width = client_width / 2;
-			drop_box.height = client_height;
-		} else {
-			drop_direction = RIGHT;
-			drop_box.x = bw + client_width / 2;
-			drop_box.y = bw;
-			drop_box.width = client_width / 2;
-			drop_box.height = client_height;
-		}
+
 	} else {
 		double dist_left = rel_x;
 		double dist_right = client_width - rel_x;
