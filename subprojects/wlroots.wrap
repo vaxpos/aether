@@ -6,3 +6,4 @@ depth = 1
 
 [provide]
 wlroots-0.19 = wlroots
+ 

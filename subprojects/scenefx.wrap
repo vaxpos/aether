@@ -5,4 +5,4 @@ revision = 0.4.1
 depth = 1
 
 [provide]
-scenefx-0.4 = scenefx
+scenefx-0.4 = scenefx 
