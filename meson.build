@@ -1,5 +1,5 @@
 project('aether', ['c', 'cpp'],
-  version : '0.12.9',
+  version : '0.1.0',
 )
 
 subdir('protocols')
@@ -15,52 +15,34 @@ endif
 prefix = get_option('prefix')
 sysconfdir = get_option('sysconfdir')
 
-# 如果 sysconfdir 以 prefix 开头，去掉 prefix
 if sysconfdir.startswith(prefix) and not is_nixos
   sysconfdir = sysconfdir.substring(prefix.length())
-  # 确保 sysconfdir 是绝对路径
   if not sysconfdir.startswith('/')
     sysconfdir = '/' + sysconfdir
   endif
 endif
-
-# 打印调试信息，确认 sysconfdir 的值
-# message('prefix: ' + prefix)
-# message('sysconfdir: ' + sysconfdir)
 
 cc = meson.get_compiler('c')
 libm = cc.find_library('m')
 xcb = dependency('xcb', required : get_option('xwayland'))
 xlibs = dependency('xcb-icccm', required : get_option('xwayland'))
 wayland_server_dep = dependency('wayland-server',version: '>=1.23.1')
-wlroots_dep = declare_dependency(
-  compile_args: [
-    '-I/usr/include/pixman-1',
-    '-I/usr/include/libdrm',
-    '-I/home/x/Downloads/Work/wlroots/include',
-    '-I/home/x/Downloads/Work/wlroots/build/include'
-  ],
-  link_args: [
-    '-Wl,-rpath,/home/x/Downloads/Work/wlroots/build',
-    '-L/home/x/Downloads/Work/wlroots/build',
-    '-lwlroots-0.19'
-  ]
-)
+wlroots_proj = subproject('wlroots', default_options: ['default_library=static', 'examples=false', 'xwayland=enabled', 'backends=drm,libinput,x11'])
+wlroots_dep = wlroots_proj.get_variable('wlroots')
 xkbcommon_dep = dependency('xkbcommon')
 libinput_dep = dependency('libinput',version: '>=1.25.0')
 libwayland_client_dep = dependency('wayland-client')
 pcre2_dep = dependency('libpcre2-8')
-libscenefx_dep = dependency('scenefx-0.4',version: '>=0.4.1')
+scenefx_proj = subproject('scenefx', default_options: ['default_library=static'])
+libscenefx_dep = scenefx_proj.get_variable('scenefx')
 cairo_dep       = dependency('cairo')
 pangocairo_dep  = dependency('pangocairo')
 gdkpixbuf_dep   = dependency('gdk-pixbuf-2.0')
 
 
-# 获取版本信息
 git = find_program('git', required : false)
 is_git_repo = false
 
-# 检查当前目录是否是 Git 仓库
 if git.found()
   git_status = run_command(git, 'rev-parse', '--is-inside-work-tree', check : false)
   if git_status.returncode() == 0 and git_status.stdout().strip() == 'true'
@@ -69,18 +51,15 @@ if git.found()
 endif
 
 if is_git_repo
-  # 如果是 Git 目录，获取 Commit Hash 和最新的 tag
   commit_hash = run_command(git, 'rev-parse', '--short', 'HEAD', check : false).stdout().strip()
   latest_tag = meson.project_version()
   version_with_hash = '@0@(@1@)'.format(latest_tag, commit_hash)
 else
-  # 如果不是 Git 目录，使用项目版本号和 "release" 字符串
   commit_hash = 'release'
   latest_tag = meson.project_version()
   version_with_hash = '@0@(@1@)'.format(latest_tag, commit_hash)
 endif
 
-# 定义编译参数
 c_args = [
   '-g',
   '-Wno-unused-function',
@@ -90,7 +69,6 @@ c_args = [
   '-DSYSCONFDIR="@0@"'.format('/etc'),
 ]
 
-# 仅在 debug 选项启用时添加调试参数
 if get_option('asan')
   c_args += [
     '-fsanitize=address',
@@ -103,7 +81,6 @@ if xcb.found() and xlibs.found()
   c_args += '-DXWAYLAND'
 endif
 
-# 链接参数（根据 debug 状态添加 ASAN）
 link_args = []
 if get_option('asan')
   link_args += '-fsanitize=address'
@@ -150,7 +127,6 @@ wayland_scanner_private_code = generator(
   arguments: ['private-code', '@INPUT@', '@OUTPUT@']
 )
 
-# 在 mmsg 目标中使用生成器
 executable('mmsg',
   'mmsg/mmsg.c',
   wayland_scanner_private_code.process(aether_ipc_protocol),

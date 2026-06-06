@@ -365,7 +365,8 @@ struct Client {
 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel;
 	int32_t isfloating, isurgent, isfullscreen, isfakefullscreen,
 		need_float_size_reduce, isminimized, isoverlay, isnosizehint,
-		ignore_maximize, ignore_minimize, indleinhibit_when_focus;
+		ignore_maximize, ignore_minimize, indleinhibit_when_focus,
+		layout_forced_floating; /* set when floating layout forced this window to float */
 	int32_t ismaximizescreen;
 	int32_t overview_backup_bw;
 	int32_t fullscreen_backup_x, fullscreen_backup_y, fullscreen_backup_w,
@@ -1011,7 +1012,7 @@ struct Pertag {
 	struct DwindleNode *dwindle_root[LENGTH(tags) + 1];
 	const Layout *ltidxs[LENGTH(tags) + 1];
 	struct TagScrollerState *scroller_state[LENGTH(tags) + 1];
-	int32_t isFloatingCompositorMode[LENGTH(tags) + 1]; /* وضع الملحن العائم per-tag */
+
 };
 #include "config/parse_config.h"
 
@@ -1082,6 +1083,7 @@ static struct wl_event_source *sync_keymap;
 #include "fetch/fetch.h"
 #include "layout/arrange.h"
 #include "layout/dwindle.h"
+#include "layout/floating.h"
 #include "layout/horizontal.h"
 #include "layout/scroll.h"
 #include "layout/vertical.h"

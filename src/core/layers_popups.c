@@ -607,9 +607,9 @@ void focusclient(Client *c, int32_t lift) {
 	if (c && lift)
 		wlr_scene_node_raise_to_top(&c->scene->node); // 将视图提升到顶层
 
-	/* In floating compositor mode, always raise focused floating window */
+	/* In floating layout mode, always raise focused floating window */
 	if (c && c->mon && c->isfloating &&
-	    c->mon->pertag->isFloatingCompositorMode[c->mon->pertag->curtag])
+	    c->mon->pertag->ltidxs[c->mon->pertag->curtag]->id == FLOATING)
 		wlr_scene_node_raise_to_top(&c->scene->node);
 
 	if (c && client_surface(c) == old_keyboard_focus_surface && selmon &&

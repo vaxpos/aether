@@ -518,11 +518,14 @@ void setmon(Client *c, Monitor *m, uint32_t newtags, bool focus) {
 		resize(c, c->geom, 0);
 		client_reset_mon_tags(c, m, newtags);
 		check_match_tag_floating_rule(c, m);
-		/* In floating compositor mode, force new windows to float */
+		/* In floating layout mode, force new windows to float */
 		if (!c->isfloating && !client_is_unmanaged(c) &&
-		    m->pertag->isFloatingCompositorMode[
-		        get_tags_first_tag_num(c->tags ? c->tags : m->tagset[m->seltags])])
+		    m->pertag->ltidxs[
+		        get_tags_first_tag_num(c->tags ? c->tags : m->tagset[m->seltags])]
+		        ->id == FLOATING) {
 			c->isfloating = 1;
+			c->layout_forced_floating = 1;
+		}
 		setfloating(c, c->isfloating);
 		setfullscreen(c, c->isfullscreen); /* This will call arrange(c->mon) */
 	}

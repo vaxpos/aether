@@ -601,7 +601,87 @@ int32_t setlayout(const Arg *arg) {
 
 	for (jk = 0; jk < LENGTH(layouts); jk++) {
 		if (strcmp(layouts[jk].name, arg->v) == 0) {
-			selmon->pertag->ltidxs[selmon->pertag->curtag] = &layouts[jk];
+			const Layout *old_layout =
+				selmon->pertag->ltidxs[selmon->pertag->curtag];
+			const Layout *new_layout = &layouts[jk];
+
+			bool was_floating = old_layout->id == FLOATING;
+			bool now_floating = new_layout->id == FLOATING;
+
+			selmon->pertag->ltidxs[selmon->pertag->curtag] = new_layout;
+
+			Client *c = NULL;
+			if (now_floating && !was_floating) {
+				/* Entering floating layout:
+				 * convert ALL visible tiled windows (including
+				 * maximized-screen ones) to floating.
+				 * Also mark minimized tiled windows so we can
+				 * restore them when leaving this layout. */
+				wl_list_for_each(c, &clients, link) {
+					/* Process both visible windows AND minimized windows
+					 * belonging to this monitor (minimized have tags=0
+					 * so VISIBLEON misses them). */
+					bool is_visible = VISIBLEON(c, selmon) && !client_is_unmanaged(c) && !c->iskilling;
+					bool is_minimized_here = c->isminimized && c->mon == selmon && !client_is_unmanaged(c) && !c->iskilling;
+					if (!is_visible && !is_minimized_here)
+						continue;
+					if (!c->isfloating) {
+						/* Save proportions for possible restore */
+						c->old_master_inner_per = c->master_inner_per;
+						c->old_stack_inner_per  = c->stack_inner_per;
+						c->layout_forced_floating = 1;
+						if (!c->isminimized) {
+							setfloating(c, 1);
+						} else {
+							/* Window is minimized: just update the flag
+							 * so we know to restore it when leaving
+							 * floating layout. Don't call setfloating()
+							 * because the surface is unmapped. */
+							c->isfloating = 1;
+						}
+					}
+					/* Already floating (e.g. via togglefloating):
+					 * do NOT mark layout_forced_floating so it keeps
+					 * its user-chosen floating state on exit. */
+
+					/* Also exit maximized-screen state (only for visible windows) */
+					if (is_visible && c->ismaximizescreen)
+						setmaximizescreen(c, 0);
+				}
+			} else if (!now_floating && was_floating) {
+			/* Leaving floating layout:
+			 * send ALL windows that were forced to float by this
+			 * layout (layout_forced_floating) back to tiling,
+			 * including minimized ones. */
+			wl_list_for_each(c, &clients, link) {
+				/* Process both visible windows AND minimized windows
+				 * belonging to this monitor (minimized have tags=0
+				 * so VISIBLEON misses them). */
+				bool is_visible = VISIBLEON(c, selmon) && !client_is_unmanaged(c) && !c->iskilling;
+				bool is_minimized_here = c->isminimized && c->mon == selmon && !client_is_unmanaged(c) && !c->iskilling;
+				if (!is_visible && !is_minimized_here)
+					continue;
+				if (c->layout_forced_floating) {
+					c->layout_forced_floating = 0;
+					/* Restore saved proportions if available */
+					if (c->old_master_inner_per > 0.0f)
+						c->master_inner_per = c->old_master_inner_per;
+					if (c->old_stack_inner_per > 0.0f)
+						c->stack_inner_per  = c->old_stack_inner_per;
+					if (!c->isminimized) {
+						setfloating(c, 0);
+					} else {
+						/* Window is minimized: just reset isfloating
+						 * so it comes back as tiled when restored. */
+						c->isfloating = 0;
+					}
+				}
+				/* Re-apply maximized-screen if needed (only for visible) */
+				if (is_visible && c->ismaximizescreen)
+					setmaximizescreen(c, 1);
+			}
+		}
+
 			clear_fullscreen_and_maximized_state(selmon);
 			arrange(selmon, false, false);
 			printstatus();
@@ -1110,29 +1190,21 @@ int32_t switch_layout(const Arg *arg) {
 			target_layout_name = config.circle_layout[0];
 		}
 
+		/* Route through setlayout to handle floating transitions */
 		for (ji = 0; ji < LENGTH(layouts); ji++) {
 			len = MAX(strlen(layouts[ji].name), strlen(target_layout_name));
 			if (strncmp(layouts[ji].name, target_layout_name, len) == 0) {
-				selmon->pertag->ltidxs[selmon->pertag->curtag] = &layouts[ji];
-
-				break;
+				return setlayout(&(Arg){.v = (char *)layouts[ji].name});
 			}
 		}
-		clear_fullscreen_and_maximized_state(selmon);
-		arrange(selmon, false, false);
-		printstatus();
 		return 0;
 	}
 
 	for (jk = 0; jk < LENGTH(layouts); jk++) {
 		if (strcmp(layouts[jk].name,
 				   selmon->pertag->ltidxs[selmon->pertag->curtag]->name) == 0) {
-			selmon->pertag->ltidxs[selmon->pertag->curtag] =
-				jk == LENGTH(layouts) - 1 ? &layouts[0] : &layouts[jk + 1];
-			clear_fullscreen_and_maximized_state(selmon);
-			arrange(selmon, false, false);
-			printstatus();
-			return 0;
+			int32_t next = jk == LENGTH(layouts) - 1 ? 0 : jk + 1;
+			return setlayout(&(Arg){.v = (char *)layouts[next].name});
 		}
 	}
 	return 0;
@@ -1927,49 +1999,16 @@ int32_t toggle_floating_compositor_mode(const Arg *arg) {
 	if (!selmon)
 		return 0;
 
-	uint32_t curtag = selmon->pertag->curtag;
+	const Layout *cur =
+		selmon->pertag->ltidxs[selmon->pertag->curtag];
 
-	/* Toggle floating compositor mode for current tag */
-	selmon->pertag->isFloatingCompositorMode[curtag] =
-	    !selmon->pertag->isFloatingCompositorMode[curtag];
-
-	int32_t enabling = selmon->pertag->isFloatingCompositorMode[curtag];
-	Client *c = NULL;
-
-	if (enabling) {
-		/* Enabling: convert all tiled windows to floating */
-		wl_list_for_each(c, &clients, link) {
-			if (!VISIBLEON(c, selmon) || client_is_unmanaged(c) ||
-			    c->iskilling || c->isminimized || c->isfullscreen)
-				continue;
-			if (!c->isfloating) {
-				/* Save tiling proportions for restore */
-				c->old_master_inner_per = c->master_inner_per;
-				c->old_stack_inner_per  = c->stack_inner_per;
-				setfloating(c, 1);
-			}
-		}
-		arrange(selmon, false, false);
+	if (cur->id == FLOATING) {
+		/* Currently floating — switch back to dwindle */
+		return setlayout(&(Arg){.v = "dwindle"});
 	} else {
-		/* Disabling: return floating windows back to tiling */
-		wl_list_for_each(c, &clients, link) {
-			if (!VISIBLEON(c, selmon) || client_is_unmanaged(c) ||
-			    c->iskilling || c->isminimized)
-				continue;
-			if (c->isfloating && !client_is_float_type(c)) {
-				/* Restore tiling proportions */
-				if (c->old_master_inner_per > 0.0f)
-					c->master_inner_per = c->old_master_inner_per;
-				if (c->old_stack_inner_per > 0.0f)
-					c->stack_inner_per  = c->old_stack_inner_per;
-				setfloating(c, 0);
-			}
-		}
-		arrange(selmon, false, false);
+		/* Not floating — switch to floating layout */
+		return setlayout(&(Arg){.v = "floating"});
 	}
-
-	printstatus();
-	return 0;
 }
 
 int32_t switcher_forward(const Arg *arg) {
