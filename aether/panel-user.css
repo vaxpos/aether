@@ -70,6 +70,17 @@
     border: none;
 }
 
+#ky {
+    background-color: rgba(0, 0, 0, 0.00);
+    border-radius: 14px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    margin-left: 4px;
+    margin-right: 4px;
+    padding: 0 4px;
+    border: none;
+}
+
 /* ── Window theme overrides (Panel Designer) ── */
 /* aether-volume — scoped under #volume-mixer-window */
 #volume-mixer-window #mixer-outer { background-color: rgba(12, 12, 14, 0.36); border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.10); min-width: 320px; }
@@ -86,7 +97,7 @@
 
 /* aether-cc — scoped under #control-center-popover */
 #control-center-popover #main-box { background-color: rgba(145, 65, 172, 0.00); border-radius: 14px; border: 1px solid rgba(0, 229, 255, 0.61); min-width: 320px; }
-#control-center-popover label { color: rgba(97, 53, 131, 1.00); }
+#control-center-popover label { color: rgba(255, 255, 255, 1.00); }
 #control-center-popover .muted, #control-center-popover .subtitle { color: rgba(136, 136, 136, 1.00); }
 #control-center-popover image { color: rgba(98, 160, 234, 1.00); }
 #control-center-popover .card { background-color: rgba(0, 0, 0, 0.35); }

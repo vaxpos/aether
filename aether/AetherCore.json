@@ -1,28 +1,38 @@
 {
-  "_comment": "AetherShell Panel Layout — edit to customise your panel.",
-  "panel": {
-    "height": 36,
+  "_comment": "AetherShell AetherCore Layout — Shell Space Topology (9-zone grid).",
+  "AetherCore": {
     "spacing": 0,
     "margin": {
       "top": 0,
+      "bottom": 0,
       "left": 0,
       "right": 0
     }
   },
   "layout": {
-    "left": [
+    "top-left": [
       {
         "type": "pill",
-        "id": "sni-pill",
+        "id": "menu-pill",
         "spacing": 0,
         "plugins": [
           "aether-appmenu",
-          "aether-clipboard",
+          "aether-clipboard"
+        ],
+        "height": 38
+      },
+      {
+        "type": "pill",
+        "id": "workspaces-pill",
+        "spacing": 14,
+        "plugins": [
           "aether-workspaces"
-        ]
+        ],
+        "width": 316,
+        "height": 40
       }
     ],
-    "center": [
+    "top-center": [
       {
         "type": "pill",
         "id": "center-pill",
@@ -32,7 +42,7 @@
         ]
       }
     ],
-    "right": [
+    "top-right": [
       {
         "type": "pill",
         "id": "sys-pill",
@@ -42,7 +52,8 @@
           "aether-search",
           "aether-notifs",
           "aether-cc"
-        ]
+        ],
+        "height": 39
       },
       {
         "type": "pill",
@@ -57,7 +68,7 @@
       },
       {
         "type": "pill",
-        "id": "ky",
+        "id": "keyboard-pill",
         "spacing": 0,
         "plugins": [
           "aether-keyboard"
@@ -65,12 +76,19 @@
       },
       {
         "type": "pill",
-        "id": "keyboard-pill",
+        "id": "sni-pill",
         "spacing": 0,
         "plugins": [
           "aether-sni-tray"
-        ]
+        ],
+        "height": 0
       }
-    ]
+    ],
+    "left": [],
+    "center": [],
+    "right": [],
+    "bottom-left": [],
+    "bottom-center": [],
+    "bottom-right": []
   }
 }

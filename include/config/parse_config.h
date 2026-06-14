@@ -2903,14 +2903,7 @@ bool parse_config_file(Config *config, const char *file_path, bool must_exist) {
 					 file_path + 1);
 			free(config_path);
 		} else {
-			const char *home = getenv("HOME");
-			if (!home) {
-				fprintf(stderr,
-						"\033[1m\033[31m[ERROR]:\033[33m HOME environment "
-						"variable not set.\n");
-				return false;
-			}
-			snprintf(full_path, sizeof(full_path), "%s/.config/aether/%s", home,
+			snprintf(full_path, sizeof(full_path), "%s/vaxp/aether/%s", SYSCONFDIR,
 					 file_path + 1);
 		}
 		file = fopen(full_path, "r");
@@ -3776,22 +3769,9 @@ bool parse_config(void) {
 	if (cli_config_path) {
 		snprintf(filename, sizeof(filename), "%s", cli_config_path);
 	} else {
-		// 获取当前用户家目录
-		const char *homedir = getenv("HOME");
-		if (!homedir) {
-			// 如果获取失败，则无法继续
-			return false;
-		}
-		// 构建日志文件路径
-		snprintf(filename, sizeof(filename), "%s/.config/aether/config.conf",
-				 homedir);
-
-		// 检查文件是否存在
-		if (access(filename, F_OK) != 0) {
-			// 如果文件不存在，则使用 /etc/aether/config.conf
-			snprintf(filename, sizeof(filename), "%s/aether/config.conf",
-					 SYSCONFDIR);
-		}
+		// Build default configuration path
+		snprintf(filename, sizeof(filename), "%s/vaxp/aether/config.conf",
+				 SYSCONFDIR);
 	}
 
 	bool parse_correct = true;
