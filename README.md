@@ -3,6 +3,8 @@ meson setup build
 meson compile -C build
 meson install -C build
 ```
+meson setup build --prefix=/usr --buildtype=release
+meson compile -C build
 
 ```
 

@@ -75,5 +75,5 @@ static const LayoutMapping layout_mappings[] = {
 	{"Telugu", "te"},
 	{"Kannada", "kn"},
 	{"Malayalam", "ml"},
-	{NULL, NULL} // 结束标记
+	{NULL, NULL} 
 };
