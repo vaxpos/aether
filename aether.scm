@@ -65,7 +65,7 @@
 built on aether — crafted for speed, flexibility, and a customizable desktop experience.")
     (license (list license:gpl3 ;aetherwm itself, aether
                    license:expat ;dwm, sway, wlroots
-                   license:cc0)))) ;tinywl
+                   license:cc0)))) ;
 
 (define-deprecated-package aetherwc
   aetherwm-git)
