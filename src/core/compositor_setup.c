@@ -924,4 +924,7 @@ void setup(void) {
 	sync_keymap = wl_event_loop_add_timer(wl_display_get_event_loop(dpy),
 										  synckeymap, NULL);
 #endif
+
+	/* Watch the config file and auto-reload on changes */
+	setup_config_watch();
 }

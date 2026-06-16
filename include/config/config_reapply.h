@@ -1,6 +1,12 @@
 #ifndef CONFIG_REAPPLY_H
 #define CONFIG_REAPPLY_H
 
+/* inotify-based config-file watcher (included here, after all enums in aether.c) */
+#include <errno.h>
+#include <string.h>
+#include <sys/inotify.h>
+#include <unistd.h>
+
 #include "config_defaults.h"
 
 void reset_blur_params(void) {
@@ -420,6 +426,119 @@ int32_t reload_config(const Arg *arg) {
 	reset_option();
 	printstatus();
 	return 1;
+}
+
+/* ── Config file auto-reload via inotify ────────────────────────────────── */
+
+/*
+ * Called by the Wayland event loop whenever the inotify fd becomes readable.
+ * Drains all pending events and triggers a config reload.
+ * Handles editors (vim, nano, …) that write atomically by replacing the file,
+ * which sends IN_MOVE_SELF / IN_DELETE_SELF and removes the watch.
+ */
+static int config_watch_callback(int fd, uint32_t mask, void *data) {
+	char buf[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+	ssize_t len;
+	bool need_reload = false;
+
+	while ((len = read(fd, buf, sizeof(buf))) > 0) {
+		const struct inotify_event *ev;
+		for (char *ptr = buf; ptr < buf + len;
+			 ptr += sizeof(*ev) + ev->len) {
+			ev = (const struct inotify_event *)ptr;
+
+			/* Re-watch after atomic replace (vim, nano, …) */
+			if (ev->mask & (IN_IGNORED | IN_MOVE_SELF | IN_DELETE_SELF)) {
+				if (config_inotify_wd >= 0) {
+					inotify_rm_watch(config_inotify_fd,
+								 config_inotify_wd);
+					config_inotify_wd = -1;
+				}
+				char path[1024];
+				if (cli_config_path)
+					snprintf(path, sizeof(path), "%s", cli_config_path);
+				else
+					snprintf(path, sizeof(path),
+							 "%s/vaxp/aether/config.conf", SYSCONFDIR);
+				config_inotify_wd = inotify_add_watch(
+					config_inotify_fd, path,
+					IN_CLOSE_WRITE | IN_MOVE_SELF | IN_DELETE_SELF);
+			}
+
+			if (ev->mask & (IN_CLOSE_WRITE | IN_MOVE_SELF))
+				need_reload = true;
+		}
+	}
+
+	if (need_reload) {
+		wlr_log(WLR_INFO, "[aether] config changed – reloading");
+		reload_config(NULL);
+	}
+	return 0;
+}
+
+/*
+ * Call once after setup() initialises dpy.
+ * Registers the config file with inotify and adds the fd to the
+ * Wayland event loop so changes are picked up without manual reload.
+ */
+void setup_config_watch(void) {
+	char path[1024];
+
+	if (cli_config_path)
+		snprintf(path, sizeof(path), "%s", cli_config_path);
+	else
+		snprintf(path, sizeof(path), "%s/vaxp/aether/config.conf",
+				 SYSCONFDIR);
+
+	config_inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+	if (config_inotify_fd < 0) {
+		wlr_log(WLR_ERROR, "[aether] inotify_init1: %s", strerror(errno));
+		return;
+	}
+
+	config_inotify_wd = inotify_add_watch(config_inotify_fd, path,
+		IN_CLOSE_WRITE | IN_MOVE_SELF | IN_DELETE_SELF);
+	if (config_inotify_wd < 0) {
+		wlr_log(WLR_ERROR, "[aether] inotify_add_watch(%s): %s",
+				path, strerror(errno));
+		close(config_inotify_fd);
+		config_inotify_fd = -1;
+		return;
+	}
+
+	config_watch_source = wl_event_loop_add_fd(
+		wl_display_get_event_loop(dpy),
+		config_inotify_fd,
+		WL_EVENT_READABLE,
+		config_watch_callback,
+		NULL);
+
+	if (!config_watch_source) {
+		wlr_log(WLR_ERROR, "[aether] wl_event_loop_add_fd failed for config watch");
+		inotify_rm_watch(config_inotify_fd, config_inotify_wd);
+		close(config_inotify_fd);
+		config_inotify_fd = -1;
+		config_inotify_wd = -1;
+		return;
+	}
+
+	wlr_log(WLR_INFO, "[aether] watching config: %s", path);
+}
+
+void cleanup_config_watch(void) {
+	if (config_watch_source) {
+		wl_event_source_remove(config_watch_source);
+		config_watch_source = NULL;
+	}
+	if (config_inotify_fd >= 0) {
+		if (config_inotify_wd >= 0) {
+			inotify_rm_watch(config_inotify_fd, config_inotify_wd);
+			config_inotify_wd = -1;
+		}
+		close(config_inotify_fd);
+		config_inotify_fd = -1;
+	}
 }
 
 #endif /* CONFIG_REAPPLY_H */

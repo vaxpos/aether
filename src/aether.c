@@ -977,6 +977,10 @@ struct dvec2 *baked_points_opafadeout;
 
 static struct wl_event_source *hide_cursor_source;
 static struct wl_event_source *keep_idle_inhibit_source;
+/* config file auto-reload */
+static struct wl_event_source *config_watch_source = NULL;
+static int                     config_inotify_fd   = -1;
+static int                     config_inotify_wd   = -1;
 static bool cursor_hidden = false;
 static bool tag_combo = false;
 static const char *cli_config_path = NULL;
