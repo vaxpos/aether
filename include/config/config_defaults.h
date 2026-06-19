@@ -516,9 +516,15 @@ bool parse_config(void) {
 	if (cli_config_path) {
 		snprintf(filename, sizeof(filename), "%s", cli_config_path);
 	} else {
-		// Build default configuration path
-		snprintf(filename, sizeof(filename), "%s/vaxp/aether/config.conf",
-				 SYSCONFDIR);
+		const char *home = getenv("HOME");
+		if (!home) {
+			fprintf(stderr,
+					"\033[1m\033[31m[ERROR]:\033[33m HOME environment "
+					"variable not set.\n");
+			return false;
+		}
+		snprintf(filename, sizeof(filename), "%s/.config/aether/config.conf",
+				 home);
 	}
 
 	bool parse_correct = true;

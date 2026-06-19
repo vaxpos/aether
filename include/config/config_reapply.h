@@ -457,9 +457,15 @@ static int config_watch_callback(int fd, uint32_t mask, void *data) {
 				char path[1024];
 				if (cli_config_path)
 					snprintf(path, sizeof(path), "%s", cli_config_path);
-				else
+				else {
+					const char *home = getenv("HOME");
+					if (!home) {
+						wlr_log(WLR_ERROR, "[aether] HOME environment variable not set");
+						return 0;
+					}
 					snprintf(path, sizeof(path),
-							 "%s/vaxp/aether/config.conf", SYSCONFDIR);
+							 "%s/.config/aether/config.conf", home);
+				}
 				config_inotify_wd = inotify_add_watch(
 					config_inotify_fd, path,
 					IN_CLOSE_WRITE | IN_MOVE_SELF | IN_DELETE_SELF);
@@ -487,9 +493,14 @@ void setup_config_watch(void) {
 
 	if (cli_config_path)
 		snprintf(path, sizeof(path), "%s", cli_config_path);
-	else
-		snprintf(path, sizeof(path), "%s/vaxp/aether/config.conf",
-				 SYSCONFDIR);
+	else {
+		const char *home = getenv("HOME");
+		if (!home) {
+			wlr_log(WLR_ERROR, "[aether] HOME environment variable not set");
+			return;
+		}
+		snprintf(path, sizeof(path), "%s/.config/aether/config.conf", home);
+	}
 
 	config_inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (config_inotify_fd < 0) {

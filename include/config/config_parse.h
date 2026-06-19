@@ -1623,7 +1623,14 @@ bool parse_config_file(Config *config, const char *file_path, bool must_exist) {
 					 file_path + 1);
 			free(config_path);
 		} else {
-			snprintf(full_path, sizeof(full_path), "%s/vaxp/aether/%s", SYSCONFDIR,
+			const char *home = getenv("HOME");
+			if (!home) {
+				fprintf(stderr,
+						"\033[1m\033[31m[ERROR]:\033[33m HOME environment "
+						"variable not set.\n");
+				return false;
+			}
+			snprintf(full_path, sizeof(full_path), "%s/.config/aether/%s", home,
 					 file_path + 1);
 		}
 		file = fopen(full_path, "r");

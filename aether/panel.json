@@ -13,13 +13,16 @@
     "left": [
       {
         "type": "pill",
-        "id": "sni-pill",
+        "id": "menu-pill",
         "spacing": 0,
+        "border_color": "rgba(0, 229, 255, 0.18)",
+        "border_width": 1,
         "plugins": [
           "aether-appmenu",
           "aether-clipboard",
           "aether-workspaces"
-        ]
+        ],
+        "border_radius": 16
       }
     ],
     "center": [
@@ -29,7 +32,10 @@
         "spacing": 0,
         "plugins": [
           "aether-clock"
-        ]
+        ],
+        "border_radius": 14,
+        "border_color": "rgba(98, 160, 234, 0.15)",
+        "border_width": 1
       }
     ],
     "right": [
@@ -42,34 +48,42 @@
           "aether-search",
           "aether-notifs",
           "aether-cc"
-        ]
+        ],
+        "border_radius": 14,
+        "border_color": "rgba(224, 27, 36, 0.25)",
+        "border_width": 1
       },
       {
         "type": "pill",
         "id": "status-pill",
         "spacing": 0,
+        "border_color": "rgba(255, 0, 127, 0.27)",
+        "border_width": 1,
         "plugins": [
           "aether-wifi",
           "aether-bt",
           "aether-mic",
           "aether-volume"
-        ]
-      },
-      {
-        "type": "pill",
-        "id": "ky",
-        "spacing": 0,
-        "plugins": [
-          "aether-keyboard"
-        ]
+        ],
+        "border_radius": 14
       },
       {
         "type": "pill",
         "id": "keyboard-pill",
         "spacing": 0,
         "plugins": [
+          "aether-keyboard"
+        ],
+        "border_radius": 14
+      },
+      {
+        "type": "pill",
+        "id": "sni-pill",
+        "spacing": 0,
+        "plugins": [
           "aether-sni-tray"
-        ]
+        ],
+        "border_radius": 14
       }
     ]
   }
