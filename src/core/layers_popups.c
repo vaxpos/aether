@@ -533,8 +533,6 @@ destroynotify(struct wl_listener *listener, void *data) {
 	wl_list_remove(&c->fullscreen.link);
 	wl_list_remove(&c->maximize.link);
 	wl_list_remove(&c->minimize.link);
-	wl_list_remove(&c->request_move.link);
-	wl_list_remove(&c->request_resize.link);
 #ifdef XWAYLAND
 	if (c->type != XDGShell) {
 		wl_list_remove(&c->activate.link);
@@ -545,6 +543,8 @@ destroynotify(struct wl_listener *listener, void *data) {
 	} else
 #endif
 	{
+		wl_list_remove(&c->request_move.link);
+		wl_list_remove(&c->request_resize.link);
 		wl_list_remove(&c->commit.link);
 		wl_list_remove(&c->map.link);
 		wl_list_remove(&c->unmap.link);
