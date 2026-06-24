@@ -102,29 +102,33 @@ static void sync_scroller_state_to_clients(Monitor *m, uint32_t tag) {
 void vertical_scroll_adjust_fullandmax(Client *c, struct wlr_box *target_geom) {
 	Monitor *m = c->mon;
 	int32_t cur_gappiv = enablegaps ? m->gappiv : 0;
-	int32_t cur_gappov = enablegaps ? m->gappov : 0;
+	int32_t cur_gap_outer_top    = enablegaps ? m->gap_outer_top    : 0;
+	int32_t cur_gap_outer_bottom = enablegaps ? m->gap_outer_bottom : 0;
 	int32_t cur_gappoh = enablegaps ? m->gappoh : 0;
 
 	cur_gappiv = config.smartgaps && m->visible_scroll_tiling_clients == 1
 					 ? 0
 					 : cur_gappiv;
-	cur_gappov = config.smartgaps && m->visible_scroll_tiling_clients == 1
+	cur_gap_outer_top = config.smartgaps && m->visible_scroll_tiling_clients == 1
 					 ? 0
-					 : cur_gappov;
+					 : cur_gap_outer_top;
+	cur_gap_outer_bottom = config.smartgaps && m->visible_scroll_tiling_clients == 1
+					 ? 0
+					 : cur_gap_outer_bottom;
 	cur_gappoh = config.smartgaps && m->visible_scroll_tiling_clients == 1
 					 ? 0
 					 : cur_gappoh;
 
 	if (c->isfullscreen) {
-		target_geom->width = m->m.width;
+		target_geom->width  = m->m.width;
 		target_geom->height = m->m.height;
-		target_geom->x = m->m.x;
+		target_geom->x      = m->m.x;
 		return;
 	}
 
 	if (c->ismaximizescreen) {
-		target_geom->width = m->w.width - 2 * cur_gappoh;
-		target_geom->height = m->w.height - 2 * cur_gappov;
+		target_geom->width  = m->w.width  - 2 * cur_gappoh;
+		target_geom->height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
 		target_geom->x = m->w.x + cur_gappoh;
 		return;
 	}
@@ -145,7 +149,8 @@ void horizontal_scroll_adjust_fullandmax(Client *c,
 	Monitor *m = c->mon;
 	int32_t cur_gappih = enablegaps ? m->gappih : 0;
 	int32_t cur_gappoh = enablegaps ? m->gappoh : 0;
-	int32_t cur_gappov = enablegaps ? m->gappov : 0;
+	int32_t cur_gap_outer_top    = enablegaps ? m->gap_outer_top    : 0;
+	int32_t cur_gap_outer_bottom = enablegaps ? m->gap_outer_bottom : 0;
 
 	cur_gappih = config.smartgaps && m->visible_scroll_tiling_clients == 1
 					 ? 0
@@ -153,25 +158,28 @@ void horizontal_scroll_adjust_fullandmax(Client *c,
 	cur_gappoh = config.smartgaps && m->visible_scroll_tiling_clients == 1
 					 ? 0
 					 : cur_gappoh;
-	cur_gappov = config.smartgaps && m->visible_scroll_tiling_clients == 1
+	cur_gap_outer_top = config.smartgaps && m->visible_scroll_tiling_clients == 1
 					 ? 0
-					 : cur_gappov;
+					 : cur_gap_outer_top;
+	cur_gap_outer_bottom = config.smartgaps && m->visible_scroll_tiling_clients == 1
+					 ? 0
+					 : cur_gap_outer_bottom;
 
 	if (c->isfullscreen) {
 		target_geom->height = m->m.height;
-		target_geom->width = m->m.width;
-		target_geom->y = m->m.y;
+		target_geom->width  = m->m.width;
+		target_geom->y      = m->m.y;
 		return;
 	}
 
 	if (c->ismaximizescreen) {
-		target_geom->height = m->w.height - 2 * cur_gappov;
-		target_geom->width = m->w.width - 2 * cur_gappoh;
-		target_geom->y = m->w.y + cur_gappov;
+		target_geom->height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
+		target_geom->width  = m->w.width  - 2 * cur_gappoh;
+		target_geom->y = m->w.y + cur_gap_outer_top;
 		return;
 	}
 
-	target_geom->height = m->w.height - 2 * cur_gappov;
+	target_geom->height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
 	target_geom->y = m->w.y + (m->w.height - target_geom->height) / 2;
 }
 
@@ -313,11 +321,12 @@ void scroller(Monitor *m) {
 	m->visible_scroll_tiling_clients = n_heads;
 
 	int32_t cur_gappih = enablegaps ? m->gappih : 0;
-	int32_t cur_gappoh = enablegaps ? m->gappoh : 0;
-	int32_t cur_gappov = enablegaps ? m->gappov : 0;
 	int32_t cur_gappiv = enablegaps ? m->gappiv : 0;
+	int32_t cur_gappoh = enablegaps ? m->gappoh : 0;
+	int32_t cur_gap_outer_top    = enablegaps ? m->gap_outer_top    : 0;
+	int32_t cur_gap_outer_bottom = enablegaps ? m->gap_outer_bottom : 0;
 	if (config.smartgaps && n_heads == 1) {
-		cur_gappih = cur_gappoh = cur_gappov = 0;
+		cur_gappih = cur_gappiv = cur_gappoh = cur_gap_outer_top = cur_gap_outer_bottom = 0;
 	}
 	int32_t max_client_width =
 		m->w.width - 2 * config.scroller_structs - cur_gappih;
@@ -332,7 +341,7 @@ void scroller(Monitor *m) {
 				? head->scroller_proportion_single
 				: config.scroller_default_proportion_single;
 		struct wlr_box target_geom;
-		target_geom.height = m->w.height - 2 * cur_gappov;
+		target_geom.height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
 		target_geom.width = (m->w.width - 2 * cur_gappoh) * single_proportion;
 		target_geom.x = m->w.x + (m->w.width - target_geom.width) / 2;
 		target_geom.y = m->w.y + (m->w.height - target_geom.height) / 2;
@@ -427,7 +436,7 @@ void scroller(Monitor *m) {
 		need_scroller = false;
 
 	struct wlr_box target_geom;
-	target_geom.height = m->w.height - 2 * cur_gappov;
+	target_geom.height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
 	target_geom.width =
 		max_client_width * heads[focus_index]->scroller_proportion;
 	target_geom.y = m->w.y + (m->w.height - target_geom.height) / 2;
@@ -480,7 +489,7 @@ void scroller(Monitor *m) {
 	for (int i = 1; i <= focus_index; i++) {
 		struct ScrollerStackNode *cur = heads[focus_index - i];
 		struct wlr_box left_geom;
-		left_geom.height = m->w.height - 2 * cur_gappov;
+		left_geom.height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
 		left_geom.width = max_client_width * cur->scroller_proportion;
 		horizontal_scroll_adjust_fullandmax(cur->client, &left_geom);
 		left_geom.x = heads[focus_index - i + 1]->client->geom.x - cur_gappih -
@@ -492,7 +501,7 @@ void scroller(Monitor *m) {
 	for (int i = 1; i < n_heads - focus_index; i++) {
 		struct ScrollerStackNode *cur = heads[focus_index + i];
 		struct wlr_box right_geom;
-		right_geom.height = m->w.height - 2 * cur_gappov;
+		right_geom.height = m->w.height - cur_gap_outer_top - cur_gap_outer_bottom;
 		right_geom.width = max_client_width * cur->scroller_proportion;
 		horizontal_scroll_adjust_fullandmax(cur->client, &right_geom);
 		right_geom.x = heads[focus_index + i - 1]->client->geom.x + cur_gappih +
@@ -533,11 +542,12 @@ void vertical_scroller(Monitor *m) {
 	m->visible_scroll_tiling_clients = n_heads;
 
 	int32_t cur_gappiv = enablegaps ? m->gappiv : 0;
-	int32_t cur_gappov = enablegaps ? m->gappov : 0;
+	int32_t cur_gap_outer_top    = enablegaps ? m->gap_outer_top    : 0;
+	int32_t cur_gap_outer_bottom = enablegaps ? m->gap_outer_bottom : 0;
 	int32_t cur_gappoh = enablegaps ? m->gappoh : 0;
 	int32_t cur_gappih = enablegaps ? m->gappih : 0;
 	if (config.smartgaps && n_heads == 1) {
-		cur_gappiv = cur_gappov = cur_gappoh = 0;
+		cur_gappiv = cur_gap_outer_top = cur_gap_outer_bottom = cur_gappoh = 0;
 	}
 	int32_t max_client_height =
 		m->w.height - 2 * config.scroller_structs - cur_gappiv;
@@ -552,7 +562,7 @@ void vertical_scroller(Monitor *m) {
 				: config.scroller_default_proportion_single;
 		struct wlr_box target_geom;
 		target_geom.width = m->w.width - 2 * cur_gappoh;
-		target_geom.height = (m->w.height - 2 * cur_gappov) * single_proportion;
+		target_geom.height = (m->w.height - cur_gap_outer_top - cur_gap_outer_bottom) * single_proportion;
 		target_geom.y = m->w.y + (m->w.height - target_geom.height) / 2;
 		target_geom.x = m->w.x + (m->w.width - target_geom.width) / 2;
 		vertical_check_scroller_root_inside_mon(head->client, &target_geom);
@@ -658,7 +668,7 @@ void vertical_scroller(Monitor *m) {
 		arrange_stack_vertical_node(heads[focus_index], target_geom,
 									cur_gappih);
 	} else if (heads[focus_index]->client->ismaximizescreen) {
-		target_geom.y = m->w.y + cur_gappov;
+		target_geom.y = m->w.y + cur_gap_outer_top;
 		vertical_check_scroller_root_inside_mon(heads[focus_index]->client,
 												&target_geom);
 		arrange_stack_vertical_node(heads[focus_index], target_geom,

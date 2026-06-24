@@ -488,8 +488,10 @@ bool parse_option(Config *config, char *key, char *value) {
 		config->gappiv = atoi(value);
 	} else if (strcmp(key, "gappoh") == 0) {
 		config->gappoh = atoi(value);
-	} else if (strcmp(key, "gappov") == 0) {
-		config->gappov = atoi(value);
+	} else if (strcmp(key, "gap_outer_top") == 0) {
+		config->gap_outer_top = atoi(value);
+	} else if (strcmp(key, "gap_outer_bottom") == 0) {
+		config->gap_outer_bottom = atoi(value);
 	} else if (strcmp(key, "scratchpad_width_ratio") == 0) {
 		config->scratchpad_width_ratio = atof(value);
 	} else if (strcmp(key, "scratchpad_height_ratio") == 0) {

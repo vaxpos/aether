@@ -328,7 +328,8 @@ typedef struct {
 	uint32_t gappih;
 	uint32_t gappiv;
 	uint32_t gappoh;
-	uint32_t gappov;
+	uint32_t gap_outer_top;    /* outer vertical gap — top edge */
+	uint32_t gap_outer_bottom; /* outer vertical gap — bottom edge */
 	uint32_t borderpx;
 	float scratchpad_width_ratio;
 	float scratchpad_height_ratio;

@@ -145,7 +145,8 @@ void override_config(void) {
 	config.gappih = CLAMP_INT(config.gappih, 0, 1000);
 	config.gappiv = CLAMP_INT(config.gappiv, 0, 1000);
 	config.gappoh = CLAMP_INT(config.gappoh, 0, 1000);
-	config.gappov = CLAMP_INT(config.gappov, 0, 1000);
+	config.gap_outer_top    = CLAMP_INT(config.gap_outer_top,    0, 1000);
+	config.gap_outer_bottom = CLAMP_INT(config.gap_outer_bottom, 0, 1000);
 	config.scratchpad_width_ratio =
 		CLAMP_FLOAT(config.scratchpad_width_ratio, 0.1f, 1.0f);
 	config.scratchpad_height_ratio =
@@ -225,7 +226,8 @@ void set_value_default() {
 	config.gappih = 5;
 	config.gappiv = 5;
 	config.gappoh = 10;
-	config.gappov = 10;
+	config.gap_outer_top    = 10;
+	config.gap_outer_bottom = 10;
 	config.scratchpad_width_ratio = 0.8f;
 	config.scratchpad_height_ratio = 0.9f;
 

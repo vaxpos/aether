@@ -111,7 +111,7 @@ setclient_coordinate_center(Client *c, Monitor *tm, struct wlr_box geom,
 		}
 	}
 	if (offsety != 0) {
-		len = (m->w.height - tempbox.height - 2 * m->gappov) / 2;
+		len = (m->w.height - tempbox.height - m->gap_outer_top - m->gap_outer_bottom) / 2;
 		offset = len * (offsety / 100.0);
 		tempbox.y += offset;
 

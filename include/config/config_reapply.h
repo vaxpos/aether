@@ -306,7 +306,8 @@ void reapply_master(void) {
 			m->gappih = config.gappih;
 			m->gappiv = config.gappiv;
 			m->gappoh = config.gappoh;
-			m->gappov = config.gappov;
+			m->gap_outer_top    = config.gap_outer_top;
+			m->gap_outer_bottom = config.gap_outer_bottom;
 		}
 	}
 }

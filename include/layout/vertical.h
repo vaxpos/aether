@@ -5,7 +5,7 @@ void vertical_overview(Monitor *m) {
 	int32_t rows, cols, overrows;
 	Client *c = NULL;
 	int32_t target_gappo =
-		enablegaps ? m->isoverview ? config.overviewgappo : config.gappov : 0;
+		enablegaps ? m->isoverview ? config.overviewgappo : config.gap_outer_top : 0;
 	int32_t target_gappi =
 		enablegaps ? m->isoverview ? config.overviewgappi : config.gappiv : 0;
 	float single_width_ratio = m->isoverview ? 0.7 : 0.9;

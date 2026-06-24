@@ -85,7 +85,8 @@ void createmon(struct wl_listener *listener, void *data) {
 	m->gappih = config.gappih;
 	m->gappiv = config.gappiv;
 	m->gappoh = config.gappoh;
-	m->gappov = config.gappov;
+	m->gap_outer_top    = config.gap_outer_top;
+	m->gap_outer_bottom = config.gap_outer_bottom;
 	m->isoverview = 0;
 	m->sel = NULL;
 	m->is_in_hotarea = 0;
